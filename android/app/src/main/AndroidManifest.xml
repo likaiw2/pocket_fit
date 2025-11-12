@@ -1,4 +1,21 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 传感器权限 - 用于检测运动和静止状态 -->
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS" />
+
+    <!-- 振动权限 - 用于触觉反馈 -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- 通知权限 - 用于活动提醒 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- 前台服务权限 - 用于后台运动检测 -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+
+    <!-- 唤醒锁权限 - 保持应用在后台运行 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <application
         android:label="pocket_fit"
         android:name="${applicationName}"
