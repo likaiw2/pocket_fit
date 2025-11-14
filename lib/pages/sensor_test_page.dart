@@ -116,16 +116,6 @@ class _SensorTestPageState extends State<SensorTestPage> {
               _buildMotionStateCard(),
               const SizedBox(height: 20),
 
-              // 加速度计数据
-              _buildSensorCard(
-                title: '加速度计 (Accelerometer)',
-                icon: Icons.speed,
-                color: Colors.blue,
-                data: _currentAccelerometer,
-                history: _accelerometerHistory,
-              ),
-              const SizedBox(height: 20),
-
               // 陀螺仪数据
               _buildSensorCard(
                 title: '陀螺仪 (Gyroscope)',
@@ -133,6 +123,16 @@ class _SensorTestPageState extends State<SensorTestPage> {
                 color: Colors.purple,
                 data: _currentGyroscope,
                 history: _gyroscopeHistory,
+              ),
+              const SizedBox(height: 20),
+
+              // 加速度计数据
+              _buildSensorCard(
+                title: '加速度计 (Accelerometer)',
+                icon: Icons.speed,
+                color: Colors.blue,
+                data: _currentAccelerometer,
+                history: _accelerometerHistory,
               ),
               const SizedBox(height: 20),
 
@@ -310,7 +310,7 @@ class _SensorTestPageState extends State<SensorTestPage> {
             const SizedBox(height: 8),
             _buildDataRow('Z 轴', data.z, color),
             const SizedBox(height: 8),
-            _buildDataRow('模', data.magnitude, color, isBold: true),
+            _buildDataRow('模² (x²+y²+z²)', data.magnitudeSquared, color, isBold: true),
             const SizedBox(height: 15),
             // 简单的历史数据可视化
             _buildSimpleChart(history, color),
@@ -371,22 +371,35 @@ class _SensorTestPageState extends State<SensorTestPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '历史数据',
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-          ),
+        // 标题和数值范围
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '历史数据',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+              ),
+            ),
+            Text(
+              '范围: ${minValue.toStringAsFixed(2)} - ${maxValue.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         Container(
-          height: 60,
+          height: 80,
           decoration: BoxDecoration(
             color: color.withOpacity(0.05),
             borderRadius: BorderRadius.circular(8),
           ),
           child: CustomPaint(
-            size: Size(double.infinity, 60),
+            size: Size(double.infinity, 80),
             painter: _ChartPainter(
               data: history,
               color: color,
@@ -394,6 +407,28 @@ class _SensorTestPageState extends State<SensorTestPage> {
               maxValue: maxValue,
             ),
           ),
+        ),
+        const SizedBox(height: 4),
+        // 显示当前值
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '当前值: ${history.last.toStringAsFixed(3)}',
+              style: TextStyle(
+                fontSize: 11,
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              '数据点: ${history.length}',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -440,7 +475,17 @@ class _SensorTestPageState extends State<SensorTestPage> {
           _buildInfoRow('陀螺仪缓冲区',
               '${stats['gyroscopeBufferSize']} / ${stats['maxBufferSize']}'),
           const SizedBox(height: 8),
-          _buildInfoRow('采样间隔', '${stats['samplingInterval']} ms'),
+          _buildInfoRow('当前采样间隔', '${stats['currentSamplingInterval']} ms'),
+          const SizedBox(height: 8),
+          _buildInfoRow('运动状态', _getMotionStateText(stats['motionState'])),
+          const SizedBox(height: 12),
+          Text('采样频率配置', style: TextStyle(fontSize: 13, color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          _buildInfoRow('  静止频率', '${stats['stillInterval']} ms (0.5 Hz)'),
+          const SizedBox(height: 8),
+          _buildInfoRow('  未知频率', '${stats['unknownInterval']} ms (1 Hz)'),
+          const SizedBox(height: 8),
+          _buildInfoRow('  运动频率', '${stats['movingInterval']} ms (10 Hz)'),
         ],
       ),
     );
@@ -468,6 +513,19 @@ class _SensorTestPageState extends State<SensorTestPage> {
       ],
     );
   }
+
+  /// 获取运动状态的中文文本
+  String _getMotionStateText(String? stateString) {
+    if (stateString == null) return '未知';
+
+    if (stateString.contains('still')) {
+      return '🟢 静止';
+    } else if (stateString.contains('moving')) {
+      return '🔴 运动中';
+    } else {
+      return '⚪ 未知';
+    }
+  }
 }
 
 // 简单的图表绘制器
@@ -487,15 +545,41 @@ class _ChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (data.isEmpty) return;
+    if (data.length == 1) {
+      // 只有一个数据点，绘制一个点在中间
+      final pointPaint = Paint()
+        ..color = color
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(Offset(size.width / 2, size.height / 2), 4, pointPaint);
+      return;
+    }
 
-    final paint = Paint()
+    final range = maxValue - minValue;
+    final step = size.width / (data.length - 1);
+
+    // 1. 绘制网格线（水平参考线）
+    final gridPaint = Paint()
+      ..color = Colors.grey.withOpacity(0.2)
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke;
+
+    // 绘制3条水平网格线（顶部、中间、底部）
+    for (int i = 0; i <= 2; i++) {
+      final y = (size.height / 2) * i;
+      canvas.drawLine(
+        Offset(0, y),
+        Offset(size.width, y),
+        gridPaint,
+      );
+    }
+
+    // 2. 绘制折线
+    final linePaint = Paint()
       ..color = color
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
     final path = Path();
-    final range = maxValue - minValue;
-    final step = size.width / (data.length - 1);
 
     for (int i = 0; i < data.length; i++) {
       final x = i * step;
@@ -509,7 +593,98 @@ class _ChartPainter extends CustomPainter {
       }
     }
 
-    canvas.drawPath(path, paint);
+    canvas.drawPath(path, linePaint);
+
+    // 3. 绘制数据点（每隔几个点显示一个）
+    final pointPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+    );
+
+    // 只显示最后一个点和它的数值
+    if (data.isNotEmpty) {
+      final i = data.length - 1;
+      final x = i * step;
+      final normalizedValue = range > 0 ? (data[i] - minValue) / range : 0.5;
+      final y = size.height - (normalizedValue * size.height);
+
+      // 绘制圆点
+      canvas.drawCircle(Offset(x, y), 4, pointPaint);
+
+      // 绘制数值标签
+      textPainter.text = TextSpan(
+        text: data[i].toStringAsFixed(2),
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+      textPainter.layout();
+
+      // 计算文本位置（避免超出边界）
+      double textX = x - textPainter.width / 2;
+      double textY = y - textPainter.height - 6;
+
+      // 边界检查
+      if (textX < 0) textX = 0;
+      if (textX + textPainter.width > size.width) {
+        textX = size.width - textPainter.width;
+      }
+      if (textY < 0) textY = y + 6;
+
+      textPainter.paint(canvas, Offset(textX, textY));
+    }
+
+    // 4. 绘制最大值和最小值标记（如果有明显差异）
+    if (range > 0.1) {
+      // 找到最大值和最小值的位置
+      int maxIndex = 0;
+      int minIndex = 0;
+      for (int i = 0; i < data.length; i++) {
+        if (data[i] == maxValue) maxIndex = i;
+        if (data[i] == minValue) minIndex = i;
+      }
+
+      // 绘制最大值标记
+      if (maxIndex != data.length - 1) {
+        final x = maxIndex * step;
+        final y = size.height - (range > 0 ? (maxValue - minValue) / range : 0.5) * size.height;
+
+        canvas.drawCircle(Offset(x, y), 3, pointPaint);
+
+        textPainter.text = TextSpan(
+          text: 'max',
+          style: TextStyle(
+            color: color.withOpacity(0.7),
+            fontSize: 9,
+          ),
+        );
+        textPainter.layout();
+        textPainter.paint(canvas, Offset(x - textPainter.width / 2, y - textPainter.height - 4));
+      }
+
+      // 绘制最小值标记
+      if (minIndex != data.length - 1) {
+        final x = minIndex * step;
+        final y = size.height;
+
+        canvas.drawCircle(Offset(x, y), 3, pointPaint);
+
+        textPainter.text = TextSpan(
+          text: 'min',
+          style: TextStyle(
+            color: color.withOpacity(0.7),
+            fontSize: 9,
+          ),
+        );
+        textPainter.layout();
+        textPainter.paint(canvas, Offset(x - textPainter.width / 2, y + 2));
+      }
+    }
   }
 
   @override

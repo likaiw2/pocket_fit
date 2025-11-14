@@ -21,8 +21,15 @@ class SensorService {
   final Queue<SensorData> _gyroscopeBuffer = Queue();
 
   // 缓冲区大小配置
-  static const int _bufferSize = 100; // 保存最近100个数据点
-  static const Duration _samplingInterval = Duration(milliseconds: 100); // 采样间隔
+  static const int _bufferSize = 10; // 缓冲区大小
+
+  // 动态采样间隔配置
+  static const Duration _stillSamplingInterval = Duration(milliseconds: 2000); // 静止状态：2秒一次 (0.5 Hz)
+  static const Duration _unknownSamplingInterval = Duration(milliseconds: 1000); // 未知状态：1秒一次 (1 Hz)
+  static const Duration _movingSamplingInterval = Duration(milliseconds: 100); // 运动状态：0.1秒一次 (10 Hz)
+
+  // 当前采样间隔（根据运动状态动态调整）
+  Duration _currentSamplingInterval = Duration(milliseconds: 1000); // 初始使用未知状态频率
 
   // 数据流控制器
   final _accelerometerController = StreamController<SensorData>.broadcast();
@@ -37,6 +44,10 @@ class SensorService {
   // 服务状态
   bool _isRunning = false;
   bool get isRunning => _isRunning;
+
+  // 当前运动状态
+  MotionState _currentMotionState = MotionState.unknown;
+  MotionState get currentMotionState => _currentMotionState;
 
   // 最后一次采样时间
   DateTime? _lastAccelerometerSample;
@@ -94,9 +105,9 @@ class SensorService {
   void _onAccelerometerEvent(AccelerometerEvent event) {
     final now = DateTime.now();
 
-    // 限制采样频率
+    // 限制采样频率（根据当前运动状态动态调整）
     if (_lastAccelerometerSample != null &&
-        now.difference(_lastAccelerometerSample!) < _samplingInterval) {
+        now.difference(_lastAccelerometerSample!) < _currentSamplingInterval) {
       return;
     }
     _lastAccelerometerSample = now;
@@ -114,18 +125,15 @@ class SensorService {
 
     // 发送数据到流
     _accelerometerController.add(data);
-
-    // 分析运动状态
-    _analyzeMotionState();
   }
 
   /// 处理陀螺仪事件
   void _onGyroscopeEvent(GyroscopeEvent event) {
     final now = DateTime.now();
 
-    // 限制采样频率
+    // 限制采样频率（根据当前运动状态动态调整）
     if (_lastGyroscopeSample != null &&
-        now.difference(_lastGyroscopeSample!) < _samplingInterval) {
+        now.difference(_lastGyroscopeSample!) < _currentSamplingInterval) {
       return;
     }
     _lastGyroscopeSample = now;
@@ -143,6 +151,9 @@ class SensorService {
 
     // 发送数据到流
     _gyroscopeController.add(data);
+
+    // 分析运动状态（改为使用陀螺仪数据）
+    _analyzeMotionState();
   }
 
   /// 添加数据到缓冲区（维护固定大小的滑动窗口）
@@ -153,40 +164,93 @@ class SensorService {
     }
   }
 
-  /// 分析运动状态
+  /// 分析运动状态（改为主要使用陀螺仪）
   void _analyzeMotionState() {
-    if (_accelerometerBuffer.length < 20) {
-      // 数据不足，无法分析
+    // 需要足够的陀螺仪数据
+    if (_gyroscopeBuffer.length < 10) {
       return;
     }
 
-    // 计算加速度计数据的方差
-    final magnitudes = _accelerometerBuffer.map((d) => d.magnitude).toList();
-    final stats = _calculateStatistics(magnitudes);
+    // 使用陀螺仪数据判断运动状态
+    // 陀螺仪测量角速度，静止时接近0，更适合检测"是否在移动"
+    // 注意：这里使用 magnitudeSquared (x² + y² + z²) 而不是 magnitude (√(x² + y² + z²))
+    // 使用平方值可以避免开方运算，提高性能，且对比较大小没有影响
+    final gyroMagnitudes = _gyroscopeBuffer.map((d) => d.magnitudeSquared).toList();
+    final gyroStats = _calculateStatistics(gyroMagnitudes);
 
-    // 根据方差判断运动状态
-    // 方差阈值需要根据实际测试调整
-    const double stillThreshold = 2.0; // 静止阈值
-    const double movingThreshold = 10.0; // 运动阈值
+    // 陀螺仪阈值（基于 magnitude² = x² + y² + z²）
+    // 静止时陀螺仪值接近0，所以阈值设置较小
+    const double stillThreshold = 0.1; // 静止阈值（非常小的旋转）
+    const double movingThreshold = 0.3; // 运动阈值（明显的旋转）
 
     MotionState state;
-    if (stats['variance']! < stillThreshold) {
+
+    // 使用均值而不是方差，因为陀螺仪静止时接近0
+    final gyroMean = gyroStats['mean']!;
+
+    if (gyroMean < stillThreshold) {
       state = MotionState.still;
-    } else if (stats['variance']! > movingThreshold) {
+    } else if (gyroMean > movingThreshold) {
       state = MotionState.moving;
     } else {
       state = MotionState.unknown;
     }
 
+    // 辅助判断：如果加速度计数据也可用，结合判断
+    if (_accelerometerBuffer.length >= 10) {
+      // 加速度计也使用 magnitudeSquared
+      final accelMagnitudes = _accelerometerBuffer.map((d) => d.magnitudeSquared).toList();
+      final accelStats = _calculateStatistics(accelMagnitudes);
+
+      // 如果加速度计方差很大（说明有剧烈运动），即使陀螺仪显示静止，也判断为运动
+      // 注意：因为使用的是 magnitude²，所以阈值也需要相应调整
+      const double accelMovingThreshold = 15.0;
+      if (accelStats['variance']! > accelMovingThreshold) {
+        state = MotionState.moving;
+      }
+    }
+
+    // 动态调整采样频率
+    _updateSamplingInterval(state);
+
     final motionStats = MotionStatistics(
-      variance: stats['variance']!,
-      mean: stats['mean']!,
-      stdDeviation: stats['stdDeviation']!,
+      variance: gyroStats['variance']!,
+      mean: gyroStats['mean']!,
+      stdDeviation: gyroStats['stdDeviation']!,
       state: state,
       timestamp: DateTime.now(),
     );
 
     _motionStateController.add(motionStats);
+  }
+
+  /// 根据运动状态动态调整采样频率
+  void _updateSamplingInterval(MotionState newState) {
+    // 如果状态没有变化，不需要调整
+    if (newState == _currentMotionState) {
+      return;
+    }
+
+    final oldState = _currentMotionState;
+    _currentMotionState = newState;
+
+    Duration newInterval;
+    switch (newState) {
+      case MotionState.still:
+        newInterval = _stillSamplingInterval; // 静止：2秒一次 (0.5 Hz)
+        break;
+      case MotionState.moving:
+        newInterval = _movingSamplingInterval; // 运动：0.1秒一次 (10 Hz)
+        break;
+      case MotionState.unknown:
+        newInterval = _unknownSamplingInterval; // 未知：1秒一次 (1 Hz)
+        break;
+    }
+
+    if (newInterval != _currentSamplingInterval) {
+      _currentSamplingInterval = newInterval;
+      print('SensorService: 采样频率已调整 - $oldState -> $newState, 间隔: ${newInterval.inMilliseconds}ms');
+    }
   }
 
   /// 计算统计数据（均值、方差、标准差）
@@ -233,7 +297,11 @@ class SensorService {
       'accelerometerBufferSize': _accelerometerBuffer.length,
       'gyroscopeBufferSize': _gyroscopeBuffer.length,
       'maxBufferSize': _bufferSize,
-      'samplingInterval': _samplingInterval.inMilliseconds,
+      'currentSamplingInterval': _currentSamplingInterval.inMilliseconds,
+      'motionState': _currentMotionState.toString(),
+      'stillInterval': _stillSamplingInterval.inMilliseconds,
+      'unknownInterval': _unknownSamplingInterval.inMilliseconds,
+      'movingInterval': _movingSamplingInterval.inMilliseconds,
     };
   }
 

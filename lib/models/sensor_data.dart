@@ -1,3 +1,5 @@
+import 'dart:math';
+
 /// 传感器数据模型
 class SensorData {
   final DateTime timestamp;
@@ -14,12 +16,15 @@ class SensorData {
     required this.type,
   });
 
-  /// 计算向量的模（magnitude）
+  /// 计算向量的模（magnitude）- 真实的向量长度
   double get magnitude => _calculateMagnitude(x, y, z);
 
-  /// 计算向量模
+  /// 计算向量模的平方（用于性能优化的比较）
+  double get magnitudeSquared => x * x + y * y + z * z;
+
+  /// 计算向量模（开平方根）
   static double _calculateMagnitude(double x, double y, double z) {
-    return (x * x + y * y + z * z);
+    return sqrt(x * x + y * y + z * z);
   }
 
   @override
