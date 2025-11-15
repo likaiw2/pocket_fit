@@ -35,11 +35,13 @@ class SensorService {
   final _accelerometerController = StreamController<SensorData>.broadcast();
   final _gyroscopeController = StreamController<SensorData>.broadcast();
   final _motionStateController = StreamController<MotionStatistics>.broadcast();
+  final _sedentaryDurationController = StreamController<Duration>.broadcast();
 
   // 公开的数据流
   Stream<SensorData> get accelerometerStream => _accelerometerController.stream;
   Stream<SensorData> get gyroscopeStream => _gyroscopeController.stream;
   Stream<MotionStatistics> get motionStateStream => _motionStateController.stream;
+  Stream<Duration> get sedentaryDurationStream => _sedentaryDurationController.stream;
 
   // 服务状态
   bool _isRunning = false;
@@ -52,6 +54,26 @@ class SensorService {
   // 最后一次采样时间
   DateTime? _lastAccelerometerSample;
   DateTime? _lastGyroscopeSample;
+
+  // 久坐检测相关
+  DateTime? _sedentaryStartTime; // 静止状态开始时间
+  Duration _currentSedentaryDuration = Duration.zero; // 当前久坐时长
+  Timer? _sedentaryTimer; // 久坐时长更新定时器
+
+  // 久坐阈值配置
+  static const Duration sedentaryWarningThreshold = Duration(minutes: 30); // 久坐警告阈值
+  static const Duration sedentaryCriticalThreshold = Duration(minutes: 60); // 严重久坐阈值
+  static const Duration activityResetThreshold = Duration(minutes: 1); // 活动多久后重置久坐计时
+
+  // 久坐警告状态
+  bool _hasWarningTriggered = false;
+  bool _hasCriticalTriggered = false;
+
+  // 活动检测相关
+  DateTime? _activityStartTime; // 活动开始时间
+
+  // 获取当前久坐时长
+  Duration get currentSedentaryDuration => _currentSedentaryDuration;
 
   /// 启动传感器监听
   Future<void> start() async {
@@ -97,6 +119,10 @@ class SensorService {
 
     _accelerometerSubscription = null;
     _gyroscopeSubscription = null;
+
+    // 停止久坐计时器
+    _sedentaryTimer?.cancel();
+    _sedentaryTimer = null;
 
     print('SensorService: 传感器服务已停止');
   }
@@ -168,6 +194,17 @@ class SensorService {
   void _analyzeMotionState() {
     // 需要足够的陀螺仪数据
     if (_gyroscopeBuffer.length < 10) {
+      // 数据不足时，只在第一次广播"检测中"状态
+      if (_currentMotionState == MotionState.unknown && _gyroscopeBuffer.isEmpty) {
+        final motionStats = MotionStatistics(
+          variance: 0.0,
+          mean: 0.0,
+          stdDeviation: 0.0,
+          state: MotionState.unknown,
+          timestamp: DateTime.now(),
+        );
+        _motionStateController.add(motionStats);
+      }
       return;
     }
 
@@ -251,6 +288,95 @@ class SensorService {
       _currentSamplingInterval = newInterval;
       print('SensorService: 采样频率已调整 - $oldState -> $newState, 间隔: ${newInterval.inMilliseconds}ms');
     }
+
+    // 处理久坐检测逻辑
+    _handleSedentaryDetection(oldState, newState);
+  }
+
+  /// 处理久坐检测逻辑
+  void _handleSedentaryDetection(MotionState oldState, MotionState newState) {
+    final now = DateTime.now();
+
+    // 状态从非静止变为静止 - 开始久坐计时
+    if (oldState != MotionState.still && newState == MotionState.still) {
+      _startSedentaryTimer(now);
+    }
+    // 状态从静止变为运动 - 检查是否需要重置久坐计时
+    else if (oldState == MotionState.still && newState == MotionState.moving) {
+      _activityStartTime = now;
+      print('SensorService: 检测到活动开始');
+    }
+    // 状态从运动变为静止 - 检查活动时长是否足够重置久坐
+    else if (oldState == MotionState.moving && newState == MotionState.still) {
+      if (_activityStartTime != null) {
+        final activityDuration = now.difference(_activityStartTime!);
+        if (activityDuration >= activityResetThreshold) {
+          // 活动时间足够长，重置久坐计时
+          _resetSedentaryTimer();
+          print('SensorService: 活动时长 ${activityDuration.inSeconds}秒，久坐计时已重置');
+        } else {
+          // 活动时间太短，继续之前的久坐计时
+          print('SensorService: 活动时长 ${activityDuration.inSeconds}秒（不足${activityResetThreshold.inMinutes}分钟），继续久坐计时');
+        }
+      }
+      _activityStartTime = null;
+    }
+  }
+
+  /// 开始久坐计时
+  void _startSedentaryTimer(DateTime startTime) {
+    _sedentaryStartTime = startTime;
+    _hasWarningTriggered = false;
+    _hasCriticalTriggered = false;
+
+    print('SensorService: 开始久坐计时 - ${startTime.toString()}');
+
+    // 启动定时器，每秒更新一次久坐时长
+    _sedentaryTimer?.cancel();
+    _sedentaryTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      _updateSedentaryDuration();
+    });
+  }
+
+  /// 更新久坐时长
+  void _updateSedentaryDuration() {
+    if (_sedentaryStartTime == null) return;
+
+    final now = DateTime.now();
+    _currentSedentaryDuration = now.difference(_sedentaryStartTime!);
+
+    // 广播久坐时长更新
+    _sedentaryDurationController.add(_currentSedentaryDuration);
+
+    // 检查是否达到警告阈值
+    if (!_hasWarningTriggered && _currentSedentaryDuration >= sedentaryWarningThreshold) {
+      _hasWarningTriggered = true;
+      print('SensorService: ⚠️ 久坐警告 - 已静止 ${_currentSedentaryDuration.inMinutes} 分钟');
+      // TODO: 触发久坐警告事件
+    }
+
+    // 检查是否达到严重阈值
+    if (!_hasCriticalTriggered && _currentSedentaryDuration >= sedentaryCriticalThreshold) {
+      _hasCriticalTriggered = true;
+      print('SensorService: 🚨 严重久坐警告 - 已静止 ${_currentSedentaryDuration.inMinutes} 分钟');
+      // TODO: 触发严重久坐警告事件
+    }
+  }
+
+  /// 重置久坐计时
+  void _resetSedentaryTimer() {
+    _sedentaryTimer?.cancel();
+    _sedentaryTimer = null;
+    _sedentaryStartTime = null;
+    _currentSedentaryDuration = Duration.zero;
+    _hasWarningTriggered = false;
+    _hasCriticalTriggered = false;
+    _activityStartTime = null;
+
+    // 广播久坐时长重置
+    _sedentaryDurationController.add(Duration.zero);
+
+    print('SensorService: 久坐计时已重置');
   }
 
   /// 计算统计数据（均值、方差、标准差）
@@ -302,6 +428,10 @@ class SensorService {
       'stillInterval': _stillSamplingInterval.inMilliseconds,
       'unknownInterval': _unknownSamplingInterval.inMilliseconds,
       'movingInterval': _movingSamplingInterval.inMilliseconds,
+      'sedentaryDuration': _currentSedentaryDuration.inSeconds,
+      'isSedentary': _sedentaryStartTime != null,
+      'sedentaryWarningThreshold': sedentaryWarningThreshold.inMinutes,
+      'sedentaryCriticalThreshold': sedentaryCriticalThreshold.inMinutes,
     };
   }
 
@@ -311,8 +441,10 @@ class SensorService {
     await _accelerometerController.close();
     await _gyroscopeController.close();
     await _motionStateController.close();
+    await _sedentaryDurationController.close();
     _accelerometerBuffer.clear();
     _gyroscopeBuffer.clear();
+    _sedentaryTimer?.cancel();
     print('SensorService: 资源已释放');
   }
 }

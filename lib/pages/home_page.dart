@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pocket_fit/pages/sensor_test_page.dart';
+import 'package:pocket_fit/services/sensor_service.dart';
+import 'package:pocket_fit/models/sensor_data.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -9,11 +12,54 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final _sensorService = SensorService();
+
+  // 实时数据
+  Duration _currentSedentaryDuration = Duration.zero;
+  MotionState _currentMotionState = MotionState.unknown;
+
   // 模拟数据 - 后续会连接到实际的数据源
   int _activeMinutesToday = 15;
   int _sedentaryMinutesToday = 120;
   int _completedActivities = 3;
   int _currentStreak = 5;
+
+  // Stream 订阅
+  StreamSubscription<Duration>? _sedentaryDurationSubscription;
+  StreamSubscription<MotionStatistics>? _motionStateSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _initSensorService();
+  }
+
+  @override
+  void dispose() {
+    _sedentaryDurationSubscription?.cancel();
+    _motionStateSubscription?.cancel();
+    super.dispose();
+  }
+
+  /// 初始化传感器服务
+  Future<void> _initSensorService() async {
+    // 启动传感器服务
+    await _sensorService.start();
+
+    // 订阅久坐时长流
+    _sedentaryDurationSubscription = _sensorService.sedentaryDurationStream.listen((duration) {
+      setState(() {
+        _currentSedentaryDuration = duration;
+      });
+    });
+
+    // 订阅运动状态流
+    _motionStateSubscription = _sensorService.motionStateStream.listen((stats) {
+      setState(() {
+        _currentMotionState = stats.state;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,8 +83,12 @@ class _HomePageState extends State<HomePage> {
               children: [
                 // 顶部欢迎区域
                 _buildWelcomeSection(),
-                const SizedBox(height: 30),
-                
+                const SizedBox(height: 20),
+
+                // 当前久坐时长卡片（醒目显示）
+                _buildCurrentSedentaryCard(),
+                const SizedBox(height: 20),
+
                 // 今日统计卡片
                 _buildTodayStatsCard(),
                 const SizedBox(height: 25),
@@ -98,6 +148,198 @@ class _HomePageState extends State<HomePage> {
         ),
       ],
     );
+  }
+
+  // 当前久坐时长卡片
+  Widget _buildCurrentSedentaryCard() {
+    final minutes = _currentSedentaryDuration.inMinutes;
+    final seconds = _currentSedentaryDuration.inSeconds % 60;
+
+    // 根据久坐时长确定颜色和提示
+    Color cardColor;
+    Color textColor;
+    String statusText;
+    IconData statusIcon;
+
+    if (_currentMotionState == MotionState.moving) {
+      cardColor = Colors.green.shade50;
+      textColor = Colors.green.shade700;
+      statusText = '正在活动中';
+      statusIcon = Icons.directions_run;
+    } else if (minutes >= 60) {
+      cardColor = Colors.red.shade50;
+      textColor = Colors.red.shade700;
+      statusText = '严重久坐警告！';
+      statusIcon = Icons.warning_amber_rounded;
+    } else if (minutes >= 30) {
+      cardColor = Colors.orange.shade50;
+      textColor = Colors.orange.shade700;
+      statusText = '久坐提醒';
+      statusIcon = Icons.notifications_active;
+    } else if (_currentMotionState == MotionState.still) {
+      cardColor = Colors.blue.shade50;
+      textColor = Colors.blue.shade700;
+      statusText = '当前静止';
+      statusIcon = Icons.event_seat;
+    } else {
+      cardColor = Colors.grey.shade50;
+      textColor = Colors.grey.shade700;
+      statusText = '检测中...';
+      statusIcon = Icons.sensors;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: textColor.withOpacity(0.3),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: textColor.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(
+                statusIcon,
+                color: textColor,
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      statusText,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _getMotionStateDescription(),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: textColor.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Column(
+                  children: [
+                    Text(
+                      '$minutes',
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    Text(
+                      '分钟',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  child: Text(
+                    ':',
+                    style: TextStyle(
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+                ),
+                Column(
+                  children: [
+                    Text(
+                      seconds.toString().padLeft(2, '0'),
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    Text(
+                      '秒',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (minutes >= 30) ...[
+            const SizedBox(height: 15),
+            Text(
+              minutes >= 60
+                  ? '🚨 您已久坐超过1小时，建议立即起身活动！'
+                  : '⚠️ 您已久坐${minutes}分钟，建议起身活动一下',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: textColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// 获取运动状态描述
+  String _getMotionStateDescription() {
+    switch (_currentMotionState) {
+      case MotionState.still:
+        final minutes = _currentSedentaryDuration.inMinutes;
+        if (minutes == 0) {
+          return '刚刚开始静止';
+        } else if (minutes < 30) {
+          return '已静止 $minutes 分钟';
+        } else if (minutes < 60) {
+          return '已久坐 $minutes 分钟，建议活动';
+        } else {
+          return '已久坐超过 1 小时！';
+        }
+      case MotionState.moving:
+        return '保持活力，继续加油！';
+      case MotionState.unknown:
+        return '正在检测您的运动状态...';
+    }
   }
 
   // 今日统计卡片

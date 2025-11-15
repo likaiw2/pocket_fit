@@ -135,20 +135,20 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(height: 30),
 
-                // 关于
-                _buildSectionTitle('关于'),
+                // About
+                _buildSectionTitle('about'),
                 const SizedBox(height: 15),
                 _buildInfoTile(
                   icon: Icons.info,
-                  title: '应用版本',
-                  subtitle: '1.0.0',
+                  title: 'Version',
+                  subtitle: '0.0.1',
                   color: Colors.indigo,
                 ),
                 const SizedBox(height: 12),
                 _buildInfoTile(
                   icon: Icons.code,
-                  title: '开发者',
-                  subtitle: 'PocketFit Team',
+                  title: 'Developed by',
+                  subtitle: 'PocketFit Team (now Diode only)',
                   color: Colors.pink,
                 ),
               ],
