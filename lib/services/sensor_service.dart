@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'dart:math';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:pocket_fit/models/sensor_data.dart';
+import 'package:pocket_fit/services/notification_service.dart';
 
 /// 传感器服务类
 /// 负责管理传感器数据采集、缓存和基本分析
@@ -11,6 +12,9 @@ class SensorService {
   static final SensorService _instance = SensorService._internal();
   factory SensorService() => _instance;
   SensorService._internal();
+
+  // 通知服务实例
+  final _notificationService = NotificationService();
 
   // 传感器数据流订阅
   StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
@@ -351,15 +355,21 @@ class SensorService {
     // 检查是否达到警告阈值
     if (!_hasWarningTriggered && _currentSedentaryDuration >= sedentaryWarningThreshold) {
       _hasWarningTriggered = true;
-      print('SensorService: ⚠️ 久坐警告 - 已静止 ${_currentSedentaryDuration.inMinutes} 分钟');
-      // TODO: 触发久坐警告事件
+      final minutes = _currentSedentaryDuration.inMinutes;
+      print('SensorService: ⚠️ 久坐警告 - 已静止 $minutes 分钟');
+
+      // 触发久坐警告通知
+      _notificationService.showSedentaryWarning(minutes);
     }
 
     // 检查是否达到严重阈值
     if (!_hasCriticalTriggered && _currentSedentaryDuration >= sedentaryCriticalThreshold) {
       _hasCriticalTriggered = true;
-      print('SensorService: 🚨 严重久坐警告 - 已静止 ${_currentSedentaryDuration.inMinutes} 分钟');
-      // TODO: 触发严重久坐警告事件
+      final minutes = _currentSedentaryDuration.inMinutes;
+      print('SensorService: 🚨 严重久坐警告 - 已静止 $minutes 分钟');
+
+      // 触发严重久坐警告通知
+      _notificationService.showSedentaryCritical(minutes);
     }
   }
 

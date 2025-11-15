@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pocket_fit/services/notification_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -8,11 +9,23 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  // 通知服务实例
+  final _notificationService = NotificationService();
+
   bool _notificationsEnabled = true;
   bool _vibrationEnabled = true;
   bool _soundEnabled = true;
   double _reminderInterval = 30.0; // 分钟
   double _sensitivity = 0.5; // 0-1
+
+  @override
+  void initState() {
+    super.initState();
+    // 从通知服务加载当前设置
+    _notificationsEnabled = _notificationService.notificationsEnabled;
+    _vibrationEnabled = _notificationService.vibrationEnabled;
+    _soundEnabled = _notificationService.soundEnabled;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,6 +77,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   onChanged: (value) {
                     setState(() {
                       _notificationsEnabled = value;
+                      _notificationService.notificationsEnabled = value;
                     });
                   },
                   color: Colors.blue,
@@ -77,7 +91,12 @@ class _SettingsPageState extends State<SettingsPage> {
                   onChanged: (value) {
                     setState(() {
                       _vibrationEnabled = value;
+                      _notificationService.vibrationEnabled = value;
                     });
+                    // 测试振动
+                    if (value) {
+                      _notificationService.vibrate(duration: 100);
+                    }
                   },
                   color: Colors.purple,
                 ),
@@ -90,6 +109,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   onChanged: (value) {
                     setState(() {
                       _soundEnabled = value;
+                      _notificationService.soundEnabled = value;
                     });
                   },
                   color: Colors.orange,

@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:pocket_fit/pages/main_navigation.dart';
+import 'package:pocket_fit/services/notification_service.dart';
 
-void main() {
+void main() async {
+  // 确保 Flutter 绑定已初始化
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 初始化通知服务
+  await NotificationService().initialize();
+
   runApp(const PocketFitApp());
 }
 
