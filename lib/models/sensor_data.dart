@@ -73,6 +73,87 @@ enum MotionState {
   unknown, // 未知
 }
 
+/// 活动类型（具体的运动类型）
+enum ActivityType {
+  idle, // 空闲/静止
+  walking, // 走路
+  running, // 跑步
+  jumping, // 跳跃
+  squatting, // 深蹲
+  waving, // 挥手
+  shaking, // 摇晃手机
+  unknown, // 未知
+}
+
+/// 活动类型扩展 - 提供友好的显示名称和描述
+extension ActivityTypeExtension on ActivityType {
+  /// 获取活动的显示名称
+  String get displayName {
+    switch (this) {
+      case ActivityType.idle:
+        return '静止';
+      case ActivityType.walking:
+        return '走路';
+      case ActivityType.running:
+        return '跑步';
+      case ActivityType.jumping:
+        return '跳跃';
+      case ActivityType.squatting:
+        return '深蹲';
+      case ActivityType.waving:
+        return '挥手';
+      case ActivityType.shaking:
+        return '摇晃';
+      case ActivityType.unknown:
+        return '未知';
+    }
+  }
+
+  /// 获取活动的描述
+  String get description {
+    switch (this) {
+      case ActivityType.idle:
+        return '保持静止状态';
+      case ActivityType.walking:
+        return '正常步行';
+      case ActivityType.running:
+        return '快速跑步';
+      case ActivityType.jumping:
+        return '原地跳跃';
+      case ActivityType.squatting:
+        return '深蹲运动';
+      case ActivityType.waving:
+        return '挥动手臂';
+      case ActivityType.shaking:
+        return '摇晃手机';
+      case ActivityType.unknown:
+        return '正在识别...';
+    }
+  }
+
+  /// 获取活动的图标
+  String get emoji {
+    switch (this) {
+      case ActivityType.idle:
+        return '🧘';
+      case ActivityType.walking:
+        return '🚶';
+      case ActivityType.running:
+        return '🏃';
+      case ActivityType.jumping:
+        return '🦘';
+      case ActivityType.squatting:
+        return '🏋️';
+      case ActivityType.waving:
+        return '👋';
+      case ActivityType.shaking:
+        return '📱';
+      case ActivityType.unknown:
+        return '❓';
+    }
+  }
+}
+
 /// 运动统计数据
 class MotionStatistics {
   final double variance; // 方差
@@ -93,6 +174,38 @@ class MotionStatistics {
   String toString() {
     return 'MotionStatistics(state: $state, variance: ${variance.toStringAsFixed(4)}, '
         'mean: ${mean.toStringAsFixed(2)}, stdDev: ${stdDeviation.toStringAsFixed(2)})';
+  }
+}
+
+/// 活动识别结果
+class ActivityRecognitionResult {
+  final ActivityType activityType; // 识别到的活动类型
+  final double confidence; // 置信度 (0.0 - 1.0)
+  final DateTime timestamp;
+  final Map<String, double>? features; // 可选的特征数据（用于调试）
+
+  ActivityRecognitionResult({
+    required this.activityType,
+    required this.confidence,
+    required this.timestamp,
+    this.features,
+  });
+
+  @override
+  String toString() {
+    return 'ActivityRecognitionResult(type: ${activityType.displayName}, '
+        'confidence: ${(confidence * 100).toStringAsFixed(1)}%, '
+        'timestamp: $timestamp)';
+  }
+
+  /// 转换为 Map
+  Map<String, dynamic> toMap() {
+    return {
+      'activityType': activityType.toString(),
+      'confidence': confidence,
+      'timestamp': timestamp.millisecondsSinceEpoch,
+      'features': features,
+    };
   }
 }
 

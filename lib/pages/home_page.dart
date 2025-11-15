@@ -1,8 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pocket_fit/pages/sensor_test_page.dart';
+import 'package:pocket_fit/pages/activity_challenge_page.dart';
+import 'package:pocket_fit/pages/activity_history_page.dart';
 import 'package:pocket_fit/services/sensor_service.dart';
+import 'package:pocket_fit/services/statistics_service.dart';
 import 'package:pocket_fit/models/sensor_data.dart';
+import 'package:pocket_fit/models/daily_statistics.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -13,16 +17,15 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final _sensorService = SensorService();
+  final _statisticsService = StatisticsService();
 
   // 实时数据
   Duration _currentSedentaryDuration = Duration.zero;
   MotionState _currentMotionState = MotionState.unknown;
 
-  // 模拟数据 - 后续会连接到实际的数据源
-  int _activeMinutesToday = 15;
-  int _sedentaryMinutesToday = 120;
-  int _completedActivities = 3;
-  int _currentStreak = 5;
+  // 今日统计数据
+  DailyStatistics? _todayStats;
+  bool _isLoadingStats = true;
 
   // Stream 订阅
   StreamSubscription<Duration>? _sedentaryDurationSubscription;
@@ -32,6 +35,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _initSensorService();
+    _loadTodayStatistics();
   }
 
   @override
@@ -59,6 +63,26 @@ class _HomePageState extends State<HomePage> {
         _currentMotionState = stats.state;
       });
     });
+  }
+
+  /// 加载今日统计数据
+  Future<void> _loadTodayStatistics() async {
+    setState(() {
+      _isLoadingStats = true;
+    });
+
+    try {
+      final stats = await _statisticsService.getTodayStatistics();
+      setState(() {
+        _todayStats = stats;
+        _isLoadingStats = false;
+      });
+    } catch (e) {
+      print('HomePage: 加载今日统计失败 - $e');
+      setState(() {
+        _isLoadingStats = false;
+      });
+    }
   }
 
   @override
@@ -344,6 +368,24 @@ class _HomePageState extends State<HomePage> {
 
   // 今日统计卡片
   Widget _buildTodayStatsCard() {
+    if (_isLoadingStats) {
+      return Container(
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // 从数据库获取的真实数据
+    final activeMinutes = _todayStats?.totalActivityDuration.toInt() ?? 0;
+    final sedentaryMinutes = _todayStats?.totalSedentaryDuration.toInt() ?? 0;
+    final completedActivities = _todayStats?.totalActivityCount ?? 0;
+    final goalProgress = _todayStats != null && _todayStats!.meetsActivityGoal ? 100 :
+                         (activeMinutes / 30 * 100).clamp(0, 100).toInt();
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -371,30 +413,36 @@ class _HomePageState extends State<HomePage> {
                   color: Colors.grey.shade800,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade100,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.local_fire_department,
-                      size: 16,
-                      color: Colors.orange.shade700,
+              FutureBuilder<int>(
+                future: _statisticsService.getConsecutiveGoalMetDays(),
+                builder: (context, snapshot) {
+                  final streak = snapshot.data ?? 0;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade100,
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$_currentStreak 天连续',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange.shade700,
-                      ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.local_fire_department,
+                          size: 16,
+                          color: Colors.orange.shade700,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$streak 天连续',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange.shade700,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
             ],
           ),
@@ -405,7 +453,7 @@ class _HomePageState extends State<HomePage> {
                 child: _buildStatItem(
                   icon: Icons.directions_run,
                   label: '活动时间',
-                  value: '$_activeMinutesToday',
+                  value: '$activeMinutes',
                   unit: '分钟',
                   color: Colors.green,
                 ),
@@ -415,7 +463,7 @@ class _HomePageState extends State<HomePage> {
                 child: _buildStatItem(
                   icon: Icons.event_seat,
                   label: '久坐时间',
-                  value: '$_sedentaryMinutesToday',
+                  value: '$sedentaryMinutes',
                   unit: '分钟',
                   color: Colors.orange,
                 ),
@@ -429,7 +477,7 @@ class _HomePageState extends State<HomePage> {
                 child: _buildStatItem(
                   icon: Icons.check_circle,
                   label: '完成活动',
-                  value: '$_completedActivities',
+                  value: '$completedActivities',
                   unit: '次',
                   color: Colors.blue,
                 ),
@@ -439,7 +487,7 @@ class _HomePageState extends State<HomePage> {
                 child: _buildStatItem(
                   icon: Icons.emoji_events,
                   label: '今日目标',
-                  value: '${(_completedActivities / 5 * 100).toInt()}',
+                  value: '$goalProgress',
                   unit: '%',
                   color: Colors.purple,
                 ),
@@ -529,9 +577,12 @@ class _HomePageState extends State<HomePage> {
                 label: '开始活动',
                 color: Colors.blue,
                 onTap: () {
-                  // TODO: 导航到活动页面
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('活动功能即将推出！')),
+                  // 导航到活动挑战页面
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ActivityChallengePage(),
+                    ),
                   );
                 },
               ),
@@ -543,10 +594,15 @@ class _HomePageState extends State<HomePage> {
                 label: '活动历史',
                 color: Colors.purple,
                 onTap: () {
-                  // TODO: 导航到历史页面
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('历史功能即将推出！')),
-                  );
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ActivityHistoryPage(),
+                    ),
+                  ).then((_) {
+                    // 从历史页面返回时刷新统计数据
+                    _loadTodayStatistics();
+                  });
                 },
               ),
             ),

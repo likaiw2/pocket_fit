@@ -3,7 +3,9 @@ import 'dart:collection';
 import 'dart:math';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:pocket_fit/models/sensor_data.dart';
+import 'package:pocket_fit/models/sedentary_record.dart';
 import 'package:pocket_fit/services/notification_service.dart';
+import 'package:pocket_fit/services/statistics_service.dart';
 
 /// 传感器服务类
 /// 负责管理传感器数据采集、缓存和基本分析
@@ -50,6 +52,9 @@ class SensorService {
   // 服务状态
   bool _isRunning = false;
   bool get isRunning => _isRunning;
+
+  // 统计服务
+  final _statisticsService = StatisticsService();
 
   // 当前运动状态
   MotionState _currentMotionState = MotionState.unknown;
@@ -374,7 +379,24 @@ class SensorService {
   }
 
   /// 重置久坐计时
-  void _resetSedentaryTimer() {
+  void _resetSedentaryTimer() async {
+    // 保存久坐记录（如果有）
+    if (_sedentaryStartTime != null && _currentSedentaryDuration.inMinutes >= 1) {
+      final record = SedentaryRecord(
+        startTime: _sedentaryStartTime!,
+        endTime: DateTime.now(),
+        wasInterrupted: true,
+        interruptionReason: '用户活动',
+      );
+
+      try {
+        await _statisticsService.saveSedentaryRecord(record);
+        print('SensorService: 久坐记录已保存 - ${record.durationInMinutes.toStringAsFixed(1)}分钟');
+      } catch (e) {
+        print('SensorService: 保存久坐记录失败 - $e');
+      }
+    }
+
     _sedentaryTimer?.cancel();
     _sedentaryTimer = null;
     _sedentaryStartTime = null;
