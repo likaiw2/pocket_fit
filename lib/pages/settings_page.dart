@@ -161,7 +161,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 _buildInfoTile(
                   icon: Icons.info,
                   title: 'Version',
-                  subtitle: '0.0.1',
+                  subtitle: '1.0.0',
                   color: Colors.indigo,
                 ),
                 const SizedBox(height: 12),

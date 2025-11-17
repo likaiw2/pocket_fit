@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:pocket_fit/models/daily_statistics.dart';
 import 'package:pocket_fit/models/sensor_data.dart';
+import 'package:pocket_fit/models/activity_record.dart';
+import 'package:pocket_fit/models/sedentary_record.dart';
 import 'package:pocket_fit/services/statistics_service.dart';
+import 'package:pocket_fit/services/database_service.dart';
+import 'package:intl/intl.dart';
 
 class StatisticsPage extends StatefulWidget {
   const StatisticsPage({super.key});
@@ -12,6 +16,7 @@ class StatisticsPage extends StatefulWidget {
 
 class _StatisticsPageState extends State<StatisticsPage> {
   final _statisticsService = StatisticsService();
+  final _databaseService = DatabaseService();
   String _selectedPeriod = '周';
 
   // 统计数据
@@ -19,6 +24,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
   List<DailyStatistics> _periodStats = [];
   Map<String, dynamic>? _overallStats;
   Map<ActivityType, int>? _activityDistribution;
+
+  // 时间线数据
+  List<ActivityRecord> _activityRecords = [];
+  List<SedentaryRecord> _sedentaryRecords = [];
+
   bool _isLoading = true;
 
   @override
@@ -39,12 +49,18 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
       // 根据选择的时间段加载数据
       List<DailyStatistics> periodStats;
+      DateTime startTime;
+      DateTime endTime = DateTime.now();
+
       if (_selectedPeriod == '日') {
         periodStats = [today];
+        startTime = DateTime(endTime.year, endTime.month, endTime.day);
       } else if (_selectedPeriod == '周') {
         periodStats = await _statisticsService.getWeekStatistics();
+        startTime = endTime.subtract(const Duration(days: 7));
       } else {
         periodStats = await _statisticsService.getMonthStatistics();
+        startTime = endTime.subtract(const Duration(days: 30));
       }
 
       // 加载总体统计
@@ -55,11 +71,24 @@ class _StatisticsPageState extends State<StatisticsPage> {
         days: _selectedPeriod == '日' ? 1 : (_selectedPeriod == '周' ? 7 : 30),
       );
 
+      // 加载时间线数据
+      final activityRecords = await _databaseService.getActivityRecords(
+        startTime: startTime,
+        endTime: endTime,
+      );
+
+      final sedentaryRecords = await _databaseService.getSedentaryRecords(
+        startTime: startTime,
+        endTime: endTime,
+      );
+
       setState(() {
         _todayStats = today;
         _periodStats = periodStats;
         _overallStats = overall;
         _activityDistribution = distribution;
+        _activityRecords = activityRecords;
+        _sedentaryRecords = sedentaryRecords;
         _isLoading = false;
       });
     } catch (e) {
@@ -124,6 +153,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
                         // 活动分布
                         _buildActivityDistribution(),
+                        const SizedBox(height: 20),
+
+                        // 时间线视图
+                        _buildTimeline(),
                         const SizedBox(height: 20),
 
                         // 详细数据列表
@@ -573,6 +606,371 @@ class _StatisticsPageState extends State<StatisticsPage> {
       return '昨天';
     } else {
       return '${date.month}月${date.day}日';
+    }
+  }
+
+  // 时间线视图
+  Widget _buildTimeline() {
+    if (_activityRecords.isEmpty && _sedentaryRecords.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Column(
+            children: [
+              Icon(Icons.timeline, size: 48, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              Text(
+                '暂无时间线数据',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '完成一些活动挑战后，这里会显示你的活动时间线',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 合并活动和久坐记录，按时间排序
+    List<Map<String, dynamic>> timelineEvents = [];
+
+    for (final record in _activityRecords) {
+      timelineEvents.add({
+        'type': 'activity',
+        'time': record.startTime,
+        'data': record,
+      });
+    }
+
+    for (final record in _sedentaryRecords) {
+      timelineEvents.add({
+        'type': 'sedentary',
+        'time': record.startTime,
+        'data': record,
+      });
+    }
+
+    // 按时间倒序排序（最新的在前）
+    timelineEvents.sort((a, b) => (b['time'] as DateTime).compareTo(a['time'] as DateTime));
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.timeline, color: Colors.blue.shade700, size: 24),
+              const SizedBox(width: 10),
+              Text(
+                '活动时间线',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          ...timelineEvents.take(20).map((event) {
+            if (event['type'] == 'activity') {
+              return _buildActivityTimelineItem(event['data'] as ActivityRecord);
+            } else {
+              return _buildSedentaryTimelineItem(event['data'] as SedentaryRecord);
+            }
+          }),
+          if (timelineEvents.length > 20)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Center(
+                child: Text(
+                  '显示最近 20 条记录（共 ${timelineEvents.length} 条）',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // 活动时间线项
+  Widget _buildActivityTimelineItem(ActivityRecord record) {
+    final timeFormat = DateFormat('HH:mm');
+    final dateFormat = DateFormat('MM月dd日');
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.shade200, width: 1),
+      ),
+      child: Row(
+        children: [
+          // 时间线指示器
+          Container(
+            width: 4,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.green,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // 图标
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.green,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              _getActivityIcon(record.activityType),
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          // 内容
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      record.activityType.displayName,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade100,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${record.count}次',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.green.shade700,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.access_time, size: 14, color: Colors.grey.shade600),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${dateFormat.format(record.startTime)} ${timeFormat.format(record.startTime)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(Icons.timer, size: 14, color: Colors.grey.shade600),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${record.durationInMinutes.toStringAsFixed(1)}分钟',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 久坐时间线项
+  Widget _buildSedentaryTimelineItem(SedentaryRecord record) {
+    final timeFormat = DateFormat('HH:mm');
+    final dateFormat = DateFormat('MM月dd日');
+
+    MaterialColor colorMaterial = Colors.orange;
+    IconData icon = Icons.event_seat;
+    String statusText = '久坐';
+
+    if (record.isCriticalLevel) {
+      colorMaterial = Colors.red;
+      icon = Icons.warning;
+      statusText = '严重久坐';
+    } else if (record.isWarningLevel) {
+      colorMaterial = Colors.orange;
+      icon = Icons.warning_amber;
+      statusText = '久坐警告';
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorMaterial.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorMaterial.shade200, width: 1),
+      ),
+      child: Row(
+        children: [
+          // 时间线指示器
+          Container(
+            width: 4,
+            height: 40,
+            decoration: BoxDecoration(
+              color: colorMaterial,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // 图标
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: colorMaterial,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          // 内容
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      statusText,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: colorMaterial,
+                      ),
+                    ),
+                    if (record.wasInterrupted) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade100,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '已中断',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.green.shade700,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.access_time, size: 14, color: Colors.grey.shade600),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${dateFormat.format(record.startTime)} ${timeFormat.format(record.startTime)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(Icons.timer, size: 14, color: Colors.grey.shade600),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${record.durationInMinutes.toStringAsFixed(1)}分钟',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 获取活动图标
+  IconData _getActivityIcon(ActivityType type) {
+    switch (type) {
+      case ActivityType.jumping:
+        return Icons.fitness_center;
+      case ActivityType.squatting:
+        return Icons.accessibility_new;
+      case ActivityType.waving:
+        return Icons.waving_hand;
+      case ActivityType.shaking:
+        return Icons.vibration;
+      case ActivityType.walking:
+        return Icons.directions_walk;
+      case ActivityType.running:
+        return Icons.directions_run;
+      default:
+        return Icons.sports;
     }
   }
 
