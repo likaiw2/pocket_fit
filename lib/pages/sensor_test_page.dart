@@ -69,7 +69,8 @@ class _SensorTestPageState extends State<SensorTestPage> {
 
   @override
   void dispose() {
-    _sensorService.stop();
+    // 不要停止传感器服务，因为它是全局单例，首页还在使用
+    // _sensorService.stop();
     super.dispose();
   }
 

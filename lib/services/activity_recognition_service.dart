@@ -36,7 +36,7 @@ class ActivityRecognitionService {
   // 数据缓冲区（用于分析）
   final List<SensorData> _accelBuffer = [];
   final List<SensorData> _gyroBuffer = [];
-  static const int _bufferSize = 50; // 缓冲区大小
+  static const int _bufferSize = 20; // 缓冲区大小（减小以降低延迟）
 
   // 当前识别的活动类型
   ActivityType _currentActivity = ActivityType.idle;
@@ -52,6 +52,8 @@ class ActivityRecognitionService {
   // 运动检测状态
   bool _isJumpingDetected = false;
   bool _isSquattingDetected = false;
+  bool _isWavingDetected = false;
+  bool _isShakingDetected = false;
   double _lastAccelMagnitude = 0.0;
   
   // 定时器
@@ -108,17 +110,29 @@ class ActivityRecognitionService {
 
   /// 分析活动类型
   void _analyzeActivity() {
-    if (_accelBuffer.length < 20 || _gyroBuffer.length < 20) {
+    // 使用滑动窗口：只取最近的 15 个数据点（约 1.5 秒）
+    // 这样可以快速响应动作的开始和结束
+    final windowSize = min(15, min(_accelBuffer.length, _gyroBuffer.length));
+
+    if (windowSize < 10) {
       return; // 数据不足
     }
 
+    final accelWindow = _accelBuffer.sublist(_accelBuffer.length - windowSize);
+    final gyroWindow = _gyroBuffer.sublist(_gyroBuffer.length - windowSize);
+
     // 计算加速度特征
-    final accelMagnitudes = _accelBuffer.map((d) => d.magnitude).toList();
+    final accelMagnitudes = accelWindow.map((d) => d.magnitude).toList();
     final accelStats = _calculateStatistics(accelMagnitudes);
-    
+
     // 计算陀螺仪特征
-    final gyroMagnitudes = _gyroBuffer.map((d) => d.magnitude).toList();
+    final gyroMagnitudes = gyroWindow.map((d) => d.magnitude).toList();
     final gyroStats = _calculateStatistics(gyroMagnitudes);
+
+    // 调试日志：定期输出传感器数据（每5秒）
+    if (DateTime.now().millisecondsSinceEpoch % 5000 < 200) {
+      print('ActivityRecognitionService: 传感器数据 - 加速度方差: ${accelStats['variance']!.toStringAsFixed(2)}, 陀螺仪方差: ${gyroStats['variance']!.toStringAsFixed(2)}, 陀螺仪均值: ${gyroStats['mean']!.toStringAsFixed(2)}');
+    }
 
     // 获取最新的加速度值
     final latestAccel = _accelBuffer.last;
@@ -186,19 +200,19 @@ class ActivityRecognitionService {
   bool _detectJumping(Map<String, double> accelStats, double currentMagnitude) {
     // 跳跃特征：加速度突然增大（起跳）或突然减小（落地）
     final magnitudeChange = (currentMagnitude - _lastAccelMagnitude).abs();
-    
+
     if (magnitudeChange > 15.0 && !_isJumpingDetected) {
       _isJumpingDetected = true;
       _incrementActivityCount(ActivityType.jumping);
-      
-      // 500ms后重置检测状态
-      Future.delayed(const Duration(milliseconds: 500), () {
+
+      // 400ms后重置检测状态（缩短冷却时间以提高响应速度）
+      Future.delayed(const Duration(milliseconds: 400), () {
         _isJumpingDetected = false;
       });
-      
+
       return true;
     }
-    
+
     return false;
   }
 
@@ -206,32 +220,62 @@ class ActivityRecognitionService {
   bool _detectSquatting(Map<String, double> accelStats, SensorData latestAccel) {
     // 深蹲特征：Z轴加速度周期性变化（上下运动）
     final zVariance = _calculateZAxisVariance();
-    
+
     if (zVariance > 3.0 && zVariance < 10.0 && !_isSquattingDetected) {
       _isSquattingDetected = true;
       _incrementActivityCount(ActivityType.squatting);
-      
-      // 1秒后重置检测状态
-      Future.delayed(const Duration(seconds: 1), () {
+
+      // 700ms后重置检测状态（缩短冷却时间）
+      Future.delayed(const Duration(milliseconds: 700), () {
         _isSquattingDetected = false;
       });
-      
+
       return true;
     }
-    
+
     return false;
   }
 
   /// 检测挥手
   bool _detectWaving(Map<String, double> gyroStats) {
     // 挥手特征：陀螺仪高频率旋转
-    return gyroStats['variance']! > 5.0 && gyroStats['mean']! > 2.0;
+    // 降低阈值，使其更容易触发
+    if (gyroStats['variance']! > 3.0 && gyroStats['mean']! > 1.5 && !_isWavingDetected) {
+      _isWavingDetected = true;
+      _incrementActivityCount(ActivityType.waving);
+
+      print('ActivityRecognitionService: 挥手检测 - 陀螺仪方差: ${gyroStats['variance']!.toStringAsFixed(2)}, 均值: ${gyroStats['mean']!.toStringAsFixed(2)}');
+
+      // 500ms后重置检测状态（缩短冷却时间）
+      Future.delayed(const Duration(milliseconds: 500), () {
+        _isWavingDetected = false;
+      });
+
+      return true;
+    }
+
+    return false;
   }
 
   /// 检测摇晃
   bool _detectShaking(Map<String, double> accelStats, Map<String, double> gyroStats) {
     // 摇晃特征：加速度和陀螺仪都有高频变化
-    return accelStats['variance']! > 10.0 && gyroStats['variance']! > 3.0;
+    // 降低阈值，使其更容易触发
+    if (accelStats['variance']! > 8.0 && gyroStats['variance']! > 2.0 && !_isShakingDetected) {
+      _isShakingDetected = true;
+      _incrementActivityCount(ActivityType.shaking);
+
+      print('ActivityRecognitionService: 摇晃检测 - 加速度方差: ${accelStats['variance']!.toStringAsFixed(2)}, 陀螺仪方差: ${gyroStats['variance']!.toStringAsFixed(2)}');
+
+      // 400ms后重置检测状态（缩短冷却时间）
+      Future.delayed(const Duration(milliseconds: 400), () {
+        _isShakingDetected = false;
+      });
+
+      return true;
+    }
+
+    return false;
   }
 
   /// 检测走路或跑步

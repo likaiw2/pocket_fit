@@ -15,7 +15,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final _sensorService = SensorService();
   final _statisticsService = StatisticsService();
 
@@ -34,15 +34,29 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initSensorService();
     _loadTodayStatistics();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _sedentaryDurationSubscription?.cancel();
     _motionStateSubscription?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // 当应用从后台返回前台时，重新订阅 Stream
+    if (state == AppLifecycleState.resumed) {
+      print('HomePage: 应用恢复，重新订阅 Stream');
+      _resubscribeStreams();
+      _loadTodayStatistics();
+    }
   }
 
   /// 初始化传感器服务
@@ -50,19 +64,39 @@ class _HomePageState extends State<HomePage> {
     // 启动传感器服务
     await _sensorService.start();
 
+    // 订阅 Stream
+    _subscribeToStreams();
+  }
+
+  /// 订阅传感器数据流
+  void _subscribeToStreams() {
     // 订阅久坐时长流
     _sedentaryDurationSubscription = _sensorService.sedentaryDurationStream.listen((duration) {
-      setState(() {
-        _currentSedentaryDuration = duration;
-      });
+      if (mounted) {
+        setState(() {
+          _currentSedentaryDuration = duration;
+        });
+      }
     });
 
     // 订阅运动状态流
     _motionStateSubscription = _sensorService.motionStateStream.listen((stats) {
-      setState(() {
-        _currentMotionState = stats.state;
-      });
+      if (mounted) {
+        setState(() {
+          _currentMotionState = stats.state;
+        });
+      }
     });
+  }
+
+  /// 重新订阅传感器数据流
+  void _resubscribeStreams() {
+    // 取消旧的订阅
+    _sedentaryDurationSubscription?.cancel();
+    _motionStateSubscription?.cancel();
+
+    // 重新订阅
+    _subscribeToStreams();
   }
 
   /// 加载今日统计数据
@@ -381,7 +415,9 @@ class _HomePageState extends State<HomePage> {
 
     // 从数据库获取的真实数据
     final activeMinutes = _todayStats?.totalActivityDuration.toInt() ?? 0;
-    final sedentaryMinutes = _todayStats?.totalSedentaryDuration.toInt() ?? 0;
+    // 久坐时间 = 数据库中已保存的记录 + 当前正在进行的久坐时长
+    final sedentaryMinutes = (_todayStats?.totalSedentaryDuration.toInt() ?? 0) +
+                             _currentSedentaryDuration.inMinutes;
     final completedActivities = _todayStats?.totalActivityCount ?? 0;
     final goalProgress = _todayStats != null && _todayStats!.meetsActivityGoal ? 100 :
                          (activeMinutes / 30 * 100).clamp(0, 100).toInt();
