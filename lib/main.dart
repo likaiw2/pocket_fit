@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:pocket_fit/pages/main_navigation.dart';
 import 'package:pocket_fit/services/notification_service.dart';
+import 'package:pocket_fit/services/settings_service.dart';
 
 void main() async {
   // 确保 Flutter 绑定已初始化
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 初始化设置服务
+  await SettingsService().initialize();
 
   // 初始化通知服务
   await NotificationService().initialize();

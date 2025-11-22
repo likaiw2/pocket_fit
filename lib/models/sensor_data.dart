@@ -82,6 +82,7 @@ enum ActivityType {
   squatting, // 深蹲
   waving, // 挥手
   shaking, // 摇晃手机
+  figureEight, // 八字形绕圈
   unknown, // 未知
 }
 
@@ -104,6 +105,8 @@ extension ActivityTypeExtension on ActivityType {
         return '挥手';
       case ActivityType.shaking:
         return '摇晃';
+      case ActivityType.figureEight:
+        return '八字绕圈';
       case ActivityType.unknown:
         return '未知';
     }
@@ -126,6 +129,8 @@ extension ActivityTypeExtension on ActivityType {
         return '挥动手臂';
       case ActivityType.shaking:
         return '摇晃手机';
+      case ActivityType.figureEight:
+        return '手腕八字绕圈';
       case ActivityType.unknown:
         return '正在识别...';
     }
@@ -148,6 +153,8 @@ extension ActivityTypeExtension on ActivityType {
         return '👋';
       case ActivityType.shaking:
         return '📱';
+      case ActivityType.figureEight:
+        return '∞';
       case ActivityType.unknown:
         return '❓';
     }

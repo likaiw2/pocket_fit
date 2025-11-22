@@ -190,7 +190,13 @@ class FeedbackService {
   /// 播放系统音效（用于计数）
   Future<void> _playSystemSound() async {
     try {
-      // 使用系统音效作为临时替代
+      // 使用 AudioPlayer 播放更明显的音效
+      // 使用 AssetSource 播放本地音频文件（如果有的话）
+      // 如果没有音频文件，使用 UrlSource 播放在线音频
+
+      // 临时方案：播放两次系统音效，间隔短暂，让声音更明显
+      await SystemSound.play(SystemSoundType.click);
+      await Future.delayed(const Duration(milliseconds: 50));
       await SystemSound.play(SystemSoundType.click);
     } catch (e) {
       print('FeedbackService: 播放系统音效失败 - $e');

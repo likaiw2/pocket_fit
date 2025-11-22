@@ -5,6 +5,7 @@ import 'package:pocket_fit/pages/activity_challenge_page.dart';
 import 'package:pocket_fit/pages/activity_history_page.dart';
 import 'package:pocket_fit/services/sensor_service.dart';
 import 'package:pocket_fit/services/statistics_service.dart';
+import 'package:pocket_fit/services/settings_service.dart';
 import 'package:pocket_fit/models/sensor_data.dart';
 import 'package:pocket_fit/models/daily_statistics.dart';
 
@@ -18,6 +19,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final _sensorService = SensorService();
   final _statisticsService = StatisticsService();
+  final _settingsService = SettingsService();
 
   // 实时数据
   Duration _currentSedentaryDuration = Duration.zero;
@@ -27,6 +29,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   DailyStatistics? _todayStats;
   bool _isLoadingStats = true;
 
+  // 用户设置
+  int _dailyActivityGoal = 30; // 默认30分钟
+
   // Stream 订阅
   StreamSubscription<Duration>? _sedentaryDurationSubscription;
   StreamSubscription<MotionStatistics>? _motionStateSubscription;
@@ -35,8 +40,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _loadSettings();
     _initSensorService();
     _loadTodayStatistics();
+  }
+
+  /// 加载用户设置
+  Future<void> _loadSettings() async {
+    final goal = await _settingsService.getDailyActivityGoal();
+    setState(() {
+      _dailyActivityGoal = goal;
+    });
   }
 
   @override
@@ -419,8 +433,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final sedentaryMinutes = (_todayStats?.totalSedentaryDuration.toInt() ?? 0) +
                              _currentSedentaryDuration.inMinutes;
     final completedActivities = _todayStats?.totalActivityCount ?? 0;
-    final goalProgress = _todayStats != null && _todayStats!.meetsActivityGoal ? 100 :
-                         (activeMinutes / 30 * 100).clamp(0, 100).toInt();
+    // 使用用户设置的目标值计算进度
+    final goalProgress = _dailyActivityGoal > 0
+        ? (activeMinutes / _dailyActivityGoal * 100).clamp(0, 100).toInt()
+        : 0;
 
     return Container(
       padding: const EdgeInsets.all(20),

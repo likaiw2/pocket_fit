@@ -552,6 +552,14 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
             description: '摇晃手机30次',
             color: Colors.pink,
           ),
+          const SizedBox(height: 15),
+
+          _buildChallengeCard(
+            type: ActivityType.figureEight,
+            target: 12,
+            description: '八字形绕圈12次',
+            color: Colors.indigo,
+          ),
         ],
       ),
     );

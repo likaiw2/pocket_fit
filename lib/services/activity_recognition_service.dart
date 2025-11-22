@@ -47,6 +47,7 @@ class ActivityRecognitionService {
     ActivityType.squatting: 0,
     ActivityType.waving: 0,
     ActivityType.shaking: 0,
+    ActivityType.figureEight: 0,
   };
 
   // 运动检测状态
@@ -54,7 +55,14 @@ class ActivityRecognitionService {
   bool _isSquattingDetected = false;
   bool _isWavingDetected = false;
   bool _isShakingDetected = false;
+  bool _isFigureEightDetected = false;
   double _lastAccelMagnitude = 0.0;
+
+  // 八字形检测相关
+  List<double> _gyroXHistory = [];
+  List<double> _gyroYHistory = [];
+  int _figureEightCycleCount = 0;
+  DateTime? _lastFigureEightTime;
   
   // 定时器
   Timer? _analysisTimer;
@@ -138,6 +146,9 @@ class ActivityRecognitionService {
     final latestAccel = _accelBuffer.last;
     final currentAccelMagnitude = latestAccel.magnitude;
 
+    // 获取最新的陀螺仪值
+    final latestGyro = _gyroBuffer.last;
+
     // 识别活动类型
     ActivityType detectedActivity = ActivityType.idle;
     double confidence = 0.0;
@@ -147,22 +158,27 @@ class ActivityRecognitionService {
       detectedActivity = ActivityType.jumping;
       confidence = 0.85;
     }
-    // 2. 检测深蹲 - Z轴加速度周期性变化
+    // 2. 检测八字形绕圈 - 陀螺仪多轴连续旋转（优先级提高，在深蹲之前）
+    else if (_detectFigureEight(accelStats, gyroStats, latestGyro)) {
+      detectedActivity = ActivityType.figureEight;
+      confidence = 0.78;
+    }
+    // 3. 检测深蹲 - Z轴加速度周期性变化
     else if (_detectSquatting(accelStats, latestAccel)) {
       detectedActivity = ActivityType.squatting;
       confidence = 0.80;
     }
-    // 3. 检测挥手 - 陀螺仪高频率旋转
+    // 4. 检测挥手 - 陀螺仪高频率旋转
     else if (_detectWaving(gyroStats)) {
       detectedActivity = ActivityType.waving;
       confidence = 0.75;
     }
-    // 4. 检测摇晃 - 加速度和陀螺仪都有高频变化
+    // 5. 检测摇晃 - 加速度和陀螺仪都有高频变化
     else if (_detectShaking(accelStats, gyroStats)) {
       detectedActivity = ActivityType.shaking;
       confidence = 0.70;
     }
-    // 5. 检测走路/跑步 - 周期性的加速度变化
+    // 6. 检测走路/跑步 - 周期性的加速度变化
     else if (_detectWalkingOrRunning(accelStats)) {
       if (accelStats['variance']! > 8.0) {
         detectedActivity = ActivityType.running;
@@ -236,6 +252,65 @@ class ActivityRecognitionService {
     return false;
   }
 
+  /// 检测八字形绕圈
+  bool _detectFigureEight(Map<String, double> accelStats, Map<String, double> gyroStats, SensorData latestGyro) {
+    // 八字形特征：
+    // 1. 陀螺仪在X和Y轴上都有明显的旋转（形成平面内的圆周运动）
+    // 2. 旋转方向会周期性变化（形成"8"字）
+    // 3. 加速度相对稳定（不像摇晃那样剧烈）
+    // 4. X和Y轴方差要相对平衡（八字形是对称的）
+
+    // 记录陀螺仪X和Y轴的历史数据
+    _gyroXHistory.add(latestGyro.x);
+    _gyroYHistory.add(latestGyro.y);
+
+    // 保持历史数据在合理范围内（约2秒的数据）
+    if (_gyroXHistory.length > 20) {
+      _gyroXHistory.removeAt(0);
+      _gyroYHistory.removeAt(0);
+    }
+
+    // 需要足够的历史数据
+    if (_gyroXHistory.length < 15) {
+      return false;
+    }
+
+    // 计算X和Y轴的方差
+    final xVariance = _calculateVariance(_gyroXHistory);
+    final yVariance = _calculateVariance(_gyroYHistory);
+
+    // 八字形特征检测：
+    // 1. X和Y轴都有明显的旋转（方差 > 4.0）
+    final isXYRotating = xVariance > 4.0 && yVariance > 4.0;
+
+    // 2. X和Y轴方差要相对平衡（差异不超过2.2倍，八字形是对称的）
+    final varianceRatio = xVariance > yVariance ? xVariance / yVariance : yVariance / xVariance;
+    final isBalanced = varianceRatio < 2.2;
+
+    // 3. 陀螺仪总体方差要高（> 6.0，八字形需要明显的旋转）
+    final isGyroHigh = gyroStats['variance']! > 6.0;
+
+    // 4. 加速度方差适中（8.0 - 25.0，有运动但不是纯粹的摇晃）
+    final isAccelModerate = accelStats['variance']! > 8.0 && accelStats['variance']! < 25.0;
+
+    if (isXYRotating && isBalanced && isGyroHigh && isAccelModerate && !_isFigureEightDetected) {
+      _isFigureEightDetected = true;
+      _incrementActivityCount(ActivityType.figureEight);
+
+      print('ActivityRecognitionService: 八字形检测 - X方差: ${xVariance.toStringAsFixed(2)}, Y方差: ${yVariance.toStringAsFixed(2)}, '
+            '陀螺仪方差: ${gyroStats['variance']!.toStringAsFixed(2)}, 加速度方差: ${accelStats['variance']!.toStringAsFixed(2)}');
+
+      // 800ms后重置检测状态（八字形动作相对较慢）
+      Future.delayed(const Duration(milliseconds: 800), () {
+        _isFigureEightDetected = false;
+      });
+
+      return true;
+    }
+
+    return false;
+  }
+
   /// 检测挥手
   bool _detectWaving(Map<String, double> gyroStats) {
     // 挥手特征：陀螺仪高频率旋转
@@ -287,11 +362,21 @@ class ActivityRecognitionService {
   /// 计算Z轴方差
   double _calculateZAxisVariance() {
     if (_accelBuffer.length < 10) return 0.0;
-    
+
     final zValues = _accelBuffer.map((d) => d.z).toList();
     final mean = zValues.reduce((a, b) => a + b) / zValues.length;
     final variance = zValues.map((z) => pow(z - mean, 2)).reduce((a, b) => a + b) / zValues.length;
-    
+
+    return variance;
+  }
+
+  /// 计算方差（通用方法）
+  double _calculateVariance(List<double> values) {
+    if (values.isEmpty) return 0.0;
+
+    final mean = values.reduce((a, b) => a + b) / values.length;
+    final variance = values.map((v) => pow(v - mean, 2)).reduce((a, b) => a + b) / values.length;
+
     return variance;
   }
 
