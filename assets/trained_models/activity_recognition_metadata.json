@@ -1,0 +1,28 @@
+{
+  "model_version": "1.0.0",
+  "window_size": 50,
+  "stride": 10,
+  "features": [
+    "accelX",
+    "accelY",
+    "accelZ",
+    "gyroX",
+    "gyroY",
+    "gyroZ"
+  ],
+  "sampling_rate": 10,
+  "classes": [
+    "figureEight",
+    "jumping",
+    "shaking",
+    "squatting",
+    "waving"
+  ],
+  "class_names": {
+    "figureEight": "八字绕圈",
+    "jumping": "跳跃",
+    "shaking": "摇晃",
+    "squatting": "深蹲",
+    "waving": "挥手"
+  }
+}

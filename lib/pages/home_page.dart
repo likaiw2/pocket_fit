@@ -8,6 +8,7 @@ import 'package:pocket_fit/services/statistics_service.dart';
 import 'package:pocket_fit/services/settings_service.dart';
 import 'package:pocket_fit/models/sensor_data.dart';
 import 'package:pocket_fit/models/daily_statistics.dart';
+import 'package:pocket_fit/l10n/app_localizations.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -181,12 +182,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   // 欢迎区域
   Widget _buildWelcomeSection() {
+    final l10n = AppLocalizations.of(context);
     final hour = DateTime.now().hour;
-    String greeting = '早上好';
+    String greeting = l10n.goodMorning;
     if (hour >= 12 && hour < 18) {
-      greeting = '下午好';
+      greeting = l10n.goodAfternoon;
     } else if (hour >= 18) {
-      greeting = '晚上好';
+      greeting = l10n.goodEvening;
     }
 
     return Column(
@@ -210,7 +212,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
             const SizedBox(width: 8),
             Text(
-              '让我们一起保持活力！',
+              l10n.stayActive,
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey.shade600,
@@ -224,6 +226,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   // 当前久坐时长卡片
   Widget _buildCurrentSedentaryCard() {
+    final l10n = AppLocalizations.of(context);
     final minutes = _currentSedentaryDuration.inMinutes;
     final seconds = _currentSedentaryDuration.inSeconds % 60;
 
@@ -236,27 +239,27 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (_currentMotionState == MotionState.moving) {
       cardColor = Colors.green.shade50;
       textColor = Colors.green.shade700;
-      statusText = '正在活动中';
+      statusText = l10n.currentlyActive;
       statusIcon = Icons.directions_run;
     } else if (minutes >= 60) {
       cardColor = Colors.red.shade50;
       textColor = Colors.red.shade700;
-      statusText = '严重久坐警告！';
+      statusText = l10n.criticalSedentaryWarning;
       statusIcon = Icons.warning_amber_rounded;
     } else if (minutes >= 30) {
       cardColor = Colors.orange.shade50;
       textColor = Colors.orange.shade700;
-      statusText = '久坐提醒';
+      statusText = l10n.sedentaryReminder;
       statusIcon = Icons.notifications_active;
     } else if (_currentMotionState == MotionState.still) {
       cardColor = Colors.blue.shade50;
       textColor = Colors.blue.shade700;
-      statusText = '当前静止';
+      statusText = l10n.currentlyStill;
       statusIcon = Icons.event_seat;
     } else {
       cardColor = Colors.grey.shade50;
       textColor = Colors.grey.shade700;
-      statusText = '检测中...';
+      statusText = l10n.detectingMotion;
       statusIcon = Icons.sensors;
     }
 
@@ -333,7 +336,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       ),
                     ),
                     Text(
-                      '分钟',
+                      l10n.minutes,
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade600,
@@ -363,7 +366,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       ),
                     ),
                     Text(
-                      '秒',
+                      l10n.seconds,
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade600,
@@ -395,27 +398,30 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   /// 获取运动状态描述
   String _getMotionStateDescription() {
+    final l10n = AppLocalizations.of(context);
     switch (_currentMotionState) {
       case MotionState.still:
         final minutes = _currentSedentaryDuration.inMinutes;
         if (minutes == 0) {
-          return '刚刚开始静止';
+          return l10n.justStartedStill;
         } else if (minutes < 30) {
-          return '已静止 $minutes 分钟';
+          return l10n.stillForMinutes(minutes);
         } else if (minutes < 60) {
-          return '已久坐 $minutes 分钟，建议活动';
+          return l10n.sedentaryForMinutes(minutes);
         } else {
-          return '已久坐超过 1 小时！';
+          return l10n.sedentaryOverHour;
         }
       case MotionState.moving:
-        return '保持活力，继续加油！';
+        return l10n.keepActive;
       case MotionState.unknown:
-        return '正在检测您的运动状态...';
+        return l10n.detectingMotion;
     }
   }
 
   // 今日统计卡片
   Widget _buildTodayStatsCard() {
+    final l10n = AppLocalizations.of(context);
+
     if (_isLoadingStats) {
       return Container(
         padding: const EdgeInsets.all(40),
@@ -458,7 +464,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '今日概览',
+                l10n.todayOverview,
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -484,7 +490,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '$streak 天连续',
+                          l10n.daysStreak(streak),
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -504,9 +510,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               Expanded(
                 child: _buildStatItem(
                   icon: Icons.directions_run,
-                  label: '活动时间',
+                  label: l10n.activeTime,
                   value: '$activeMinutes',
-                  unit: '分钟',
+                  unit: l10n.minutes,
                   color: Colors.green,
                 ),
               ),
@@ -514,9 +520,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               Expanded(
                 child: _buildStatItem(
                   icon: Icons.event_seat,
-                  label: '久坐时间',
+                  label: l10n.sedentaryTime,
                   value: '$sedentaryMinutes',
-                  unit: '分钟',
+                  unit: l10n.minutes,
                   color: Colors.orange,
                 ),
               ),
@@ -528,9 +534,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               Expanded(
                 child: _buildStatItem(
                   icon: Icons.check_circle,
-                  label: '完成活动',
+                  label: l10n.completedActivities,
                   value: '$completedActivities',
-                  unit: '次',
+                  unit: l10n.times,
                   color: Colors.blue,
                 ),
               ),
@@ -538,7 +544,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               Expanded(
                 child: _buildStatItem(
                   icon: Icons.emoji_events,
-                  label: '今日目标',
+                  label: l10n.todayGoal,
                   value: '$goalProgress',
                   unit: '%',
                   color: Colors.purple,
@@ -609,11 +615,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   // 快速操作按钮
   Widget _buildQuickActions() {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '快速开始',
+          l10n.quickStart,
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -626,7 +634,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             Expanded(
               child: _buildActionButton(
                 icon: Icons.play_circle_filled,
-                label: '开始活动',
+                label: l10n.startActivity,
                 color: Colors.blue,
                 onTap: () {
                   // 导航到活动挑战页面
@@ -643,7 +651,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             Expanded(
               child: _buildActionButton(
                 icon: Icons.history,
-                label: '活动历史',
+                label: l10n.activityHistory,
                 color: Colors.purple,
                 onTap: () {
                   Navigator.push(
@@ -707,11 +715,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   // 功能介绍
   Widget _buildFeaturesSection() {
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '核心功能',
+          l10n.coreFeatures,
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -721,8 +731,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         const SizedBox(height: 15),
         _buildFeatureCard(
           icon: Icons.sensors,
-          title: '智能检测',
-          description: '使用手机传感器自动检测久坐行为',
+          title: l10n.smartDetection,
+          description: l10n.smartDetectionDesc,
           color: Colors.teal,
           onTap: () {
             Navigator.push(
@@ -736,15 +746,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         const SizedBox(height: 12),
         _buildFeatureCard(
           icon: Icons.gesture,
-          title: '互动挑战',
-          description: '完成有趣的动作挑战，保持身体活力',
+          title: l10n.interactiveChallenge,
+          description: l10n.interactiveChallengeDesc,
           color: Colors.indigo,
         ),
         const SizedBox(height: 12),
         _buildFeatureCard(
           icon: Icons.vibration,
-          title: '多模态反馈',
-          description: '声音、震动、视觉多重反馈引导',
+          title: l10n.multimodalFeedback,
+          description: l10n.multimodalFeedbackDesc,
           color: Colors.pink,
         ),
       ],

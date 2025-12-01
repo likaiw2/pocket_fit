@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:pocket_fit/l10n/app_localizations.dart';
 
 /// 传感器数据模型
 class SensorData {
@@ -88,7 +90,8 @@ enum ActivityType {
 
 /// 活动类型扩展 - 提供友好的显示名称和描述
 extension ActivityTypeExtension on ActivityType {
-  /// 获取活动的显示名称
+  /// 获取活动的显示名称（已弃用，请使用 getDisplayName(context)）
+  @Deprecated('Use getDisplayName(context) instead for i18n support')
   String get displayName {
     switch (this) {
       case ActivityType.idle:
@@ -112,7 +115,8 @@ extension ActivityTypeExtension on ActivityType {
     }
   }
 
-  /// 获取活动的描述
+  /// 获取活动的描述（已弃用，请使用 getDescription(context)）
+  @Deprecated('Use getDescription(context) instead for i18n support')
   String get description {
     switch (this) {
       case ActivityType.idle:
@@ -157,6 +161,56 @@ extension ActivityTypeExtension on ActivityType {
         return '∞';
       case ActivityType.unknown:
         return '❓';
+    }
+  }
+
+  /// 获取国际化的显示名称
+  String getDisplayName(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    switch (this) {
+      case ActivityType.idle:
+        return l10n.idle;
+      case ActivityType.walking:
+        return l10n.walking;
+      case ActivityType.running:
+        return l10n.running;
+      case ActivityType.jumping:
+        return l10n.jumping;
+      case ActivityType.squatting:
+        return l10n.squatting;
+      case ActivityType.waving:
+        return l10n.waving;
+      case ActivityType.shaking:
+        return l10n.shaking;
+      case ActivityType.figureEight:
+        return l10n.figureEight;
+      case ActivityType.unknown:
+        return l10n.unknown;
+    }
+  }
+
+  /// 获取国际化的描述
+  String getDescription(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    switch (this) {
+      case ActivityType.idle:
+        return l10n.idleDesc;
+      case ActivityType.walking:
+        return l10n.walkingDesc;
+      case ActivityType.running:
+        return l10n.runningDesc;
+      case ActivityType.jumping:
+        return l10n.jumpingDesc;
+      case ActivityType.squatting:
+        return l10n.squattingDesc;
+      case ActivityType.waving:
+        return l10n.wavingDesc;
+      case ActivityType.shaking:
+        return l10n.shakingDesc;
+      case ActivityType.figureEight:
+        return l10n.figureEightDesc;
+      case ActivityType.unknown:
+        return l10n.recognizing;
     }
   }
 }

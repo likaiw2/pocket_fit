@@ -1,0 +1,41 @@
+{
+  "version": "1.0.0",
+  "sampling_rate": 10,
+  "activities": {
+    "shaking": {
+      "primary_sensor": "accelerometer",
+      "threshold": 10.0,
+      "min_distance": 2,
+      "avg_frequency": 2.13,
+      "prominence": 0.3
+    },
+    "squatting": {
+      "primary_sensor": "accelerometer",
+      "threshold": 15.0,
+      "min_distance": 6,
+      "avg_frequency": 0.72,
+      "prominence": 0.3
+    },
+    "waving": {
+      "primary_sensor": "accelerometer",
+      "threshold": 10.0,
+      "min_distance": 6,
+      "avg_frequency": 0.83,
+      "prominence": 0.3
+    },
+    "figureEight": {
+      "primary_sensor": "gyroscope",
+      "threshold": 1.5,
+      "min_distance": 4,
+      "avg_frequency": 1.06,
+      "prominence": 0.3
+    },
+    "jumping": {
+      "primary_sensor": "accelerometer",
+      "threshold": 15.0,
+      "min_distance": 3,
+      "avg_frequency": 1.54,
+      "prominence": 0.3
+    }
+  }
+}

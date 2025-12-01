@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pocket_fit/services/notification_service.dart';
 import 'package:pocket_fit/services/settings_service.dart';
 import 'package:pocket_fit/services/feedback_service.dart';
+import 'package:pocket_fit/services/localization_service.dart';
+import 'package:pocket_fit/l10n/app_localizations.dart';
 import 'package:pocket_fit/models/sensor_data.dart';
 import 'package:pocket_fit/pages/data_collection_page.dart';
 
@@ -17,6 +20,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final _notificationService = NotificationService();
   final _settingsService = SettingsService();
   final _feedbackService = FeedbackService();
+  final _localizationService = LocalizationService();
 
   bool _notificationsEnabled = true;
   bool _vibrationEnabled = true;
@@ -24,6 +28,8 @@ class _SettingsPageState extends State<SettingsPage> {
   double _dailyActivityGoal = 30.0; // 分钟
   double _reminderInterval = 30.0; // 分钟
   double _sensitivity = 0.5; // 0-1
+  bool _useDLDetection = false; // 深度学习检测
+  String _language = 'zh'; // 语言设置
   bool _isLoading = true;
 
   @override
@@ -48,6 +54,8 @@ class _SettingsPageState extends State<SettingsPage> {
       final notificationsEnabled = await _settingsService.getNotificationsEnabled();
       final vibrationEnabled = await _settingsService.getVibrationEnabled();
       final soundEnabled = await _settingsService.getSoundEnabled();
+      final useDLDetection = await _settingsService.getUseDLDetection();
+      final language = await _settingsService.getLanguage();
 
       if (mounted) {
         setState(() {
@@ -57,8 +65,13 @@ class _SettingsPageState extends State<SettingsPage> {
           _notificationsEnabled = notificationsEnabled;
           _vibrationEnabled = vibrationEnabled;
           _soundEnabled = soundEnabled;
+          _useDLDetection = useDLDetection;
+          _language = language;
           _isLoading = false;
         });
+
+        // 同步到本地化服务
+        _localizationService.setLanguage(language);
 
         // 同步到通知服务
         _notificationService.notificationsEnabled = notificationsEnabled;
@@ -72,7 +85,7 @@ class _SettingsPageState extends State<SettingsPage> {
         );
       }
     } catch (e) {
-      print('SettingsPage: 加载设置失败 - $e');
+      debugPrint('SettingsPage: 加载设置失败 - $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -81,8 +94,62 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  /// 显示更新日志
+  Future<void> _showUpdateLog() async {
+    final l10n = AppLocalizations.of(context);
+
+    try {
+      // 从 assets 加载更新日志
+      final updateLog = await rootBundle.loadString('update_summary.txt');
+
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.history, color: Colors.indigo),
+              const SizedBox(width: 8),
+              Text(l10n.updateLogTitle),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: MediaQuery.of(context).size.height * 0.6,
+            child: SingleChildScrollView(
+              child: Text(
+                updateLog,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.close),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      debugPrint('加载更新日志失败: $e');
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.updateLogFailed)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     if (_isLoading) {
       return Scaffold(
         body: Container(
@@ -103,55 +170,58 @@ class _SettingsPageState extends State<SettingsPage> {
       );
     }
 
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.blue.shade50,
-              Colors.purple.shade50,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 标题
-                Text(
-                  '设置',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '个性化你的体验',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey.shade600,
+    return ValueListenableBuilder<String>(
+      valueListenable: _localizationService.languageNotifier,
+      builder: (context, language, child) {
+        return Scaffold(
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.blue.shade50,
+                  Colors.purple.shade50,
+                ],
+              ),
+            ),
+            child: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 标题
+                    Text(
+                      l10n.settingsTitle,
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.settingsSubtitle,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey.shade600,
                   ),
                 ),
                 const SizedBox(height: 30),
 
                 // 目标设置
-                _buildSectionTitle('目标设置'),
+                _buildSectionTitle(l10n.goalSettings),
                 const SizedBox(height: 15),
                 _buildSliderCard(
                   icon: Icons.flag,
-                  title: '每日活动目标',
-                  subtitle: '每天需要完成的活动时长',
+                  title: l10n.dailyActivityGoal,
+                  subtitle: l10n.dailyActivityGoalSubtitle,
                   value: _dailyActivityGoal,
                   min: 10,
                   max: 120,
                   divisions: 22,
-                  unit: '分钟',
+                  unit: l10n.minutes,
                   onChanged: (value) async {
                     setState(() {
                       _dailyActivityGoal = value;
@@ -163,12 +233,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 30),
 
                 // 通知设置
-                _buildSectionTitle('通知设置'),
+                _buildSectionTitle(l10n.notificationSettings),
                 const SizedBox(height: 15),
                 _buildSwitchTile(
                   icon: Icons.notifications,
-                  title: '启用通知',
-                  subtitle: '接收活动提醒',
+                  title: l10n.enableNotifications,
+                  subtitle: l10n.enableNotificationsSubtitle,
                   value: _notificationsEnabled,
                   onChanged: (value) async {
                     setState(() {
@@ -182,8 +252,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 12),
                 _buildSwitchTile(
                   icon: Icons.vibration,
-                  title: '振动反馈',
-                  subtitle: '活动时提供触觉反馈',
+                  title: l10n.enableVibration,
+                  subtitle: l10n.enableVibrationSubtitle,
                   value: _vibrationEnabled,
                   onChanged: (value) async {
                     setState(() {
@@ -203,8 +273,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 12),
                 _buildSwitchTile(
                   icon: Icons.volume_up,
-                  title: '声音提示',
-                  subtitle: '播放提示音效',
+                  title: l10n.enableSound,
+                  subtitle: l10n.enableSoundSubtitle,
                   value: _soundEnabled,
                   onChanged: (value) async {
                     setState(() {
@@ -224,17 +294,17 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 30),
 
                 // 活动设置
-                _buildSectionTitle('活动设置'),
+                _buildSectionTitle(l10n.activitySettings),
                 const SizedBox(height: 15),
                 _buildSliderCard(
                   icon: Icons.timer,
-                  title: '提醒间隔',
-                  subtitle: '久坐多久后提醒',
+                  title: l10n.reminderInterval,
+                  subtitle: l10n.reminderIntervalSubtitle,
                   value: _reminderInterval,
                   min: 15,
                   max: 120,
                   divisions: 7,
-                  unit: '分钟',
+                  unit: l10n.minutes,
                   onChanged: (value) async {
                     setState(() {
                       _reminderInterval = value;
@@ -246,14 +316,14 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 12),
                 _buildSliderCard(
                   icon: Icons.tune,
-                  title: '检测灵敏度',
-                  subtitle: '运动检测的敏感程度',
+                  title: l10n.detectionSensitivity,
+                  subtitle: l10n.detectionSensitivitySubtitle,
                   value: _sensitivity,
                   min: 0,
                   max: 1,
                   divisions: 10,
                   unit: '',
-                  displayValue: _getSensitivityLabel(_sensitivity),
+                  displayValue: _getSensitivityLabel(_sensitivity, l10n),
                   onChanged: (value) async {
                     setState(() {
                       _sensitivity = value;
@@ -263,10 +333,38 @@ class _SettingsPageState extends State<SettingsPage> {
                   color: Colors.teal,
                 ),
                 const SizedBox(height: 12),
+                _buildSwitchTile(
+                  icon: Icons.psychology,
+                  title: l10n.dlDetection,
+                  subtitle: l10n.dlDetectionSubtitle,
+                  value: _useDLDetection,
+                  onChanged: (value) async {
+                    setState(() {
+                      _useDLDetection = value;
+                    });
+                    await _settingsService.setUseDLDetection(value);
+
+                    // 显示提示
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            value ? l10n.dlEnabled : l10n.dlDisabled
+                          ),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  },
+                  color: Colors.deepPurple,
+                ),
+                const SizedBox(height: 12),
+                _buildLanguageSelector(l10n),
+                const SizedBox(height: 12),
                 _buildNavigationCard(
                   icon: Icons.science,
-                  title: '训练数据采集',
-                  subtitle: '采集传感器数据用于机器学习',
+                  title: l10n.trainingData,
+                  subtitle: l10n.trainingDataSubtitle,
                   color: Colors.deepPurple,
                   onTap: () {
                     Navigator.push(
@@ -280,19 +378,20 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 30),
 
                 // About
-                _buildSectionTitle('about'),
+                _buildSectionTitle(l10n.about),
                 const SizedBox(height: 15),
-                _buildInfoTile(
+                _buildNavigationCard(
                   icon: Icons.info,
-                  title: 'Version',
-                  subtitle: '1.0.0',
+                  title: l10n.version,
+                  subtitle: '2.1.0',
                   color: Colors.indigo,
+                  onTap: _showUpdateLog,
                 ),
                 const SizedBox(height: 12),
                 _buildInfoTile(
                   icon: Icons.code,
-                  title: 'Developed by',
-                  subtitle: 'PocketFit Team (now Diode only)',
+                  title: l10n.developedBy,
+                  subtitle: l10n.developerName,
                   color: Colors.pink,
                 ),
               ],
@@ -300,6 +399,8 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
       ),
+        );
+      },
     );
   }
 
@@ -530,10 +631,109 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  String _getSensitivityLabel(double value) {
-    if (value < 0.3) return '低';
-    if (value < 0.7) return '中';
-    return '高';
+  String _getSensitivityLabel(double value, AppLocalizations l10n) {
+    if (value < 0.3) return l10n.sensitivityLow;
+    if (value < 0.7) return l10n.sensitivityMedium;
+    return l10n.sensitivityHigh;
+  }
+
+  Widget _buildLanguageSelector(AppLocalizations l10n) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.language, color: Colors.blue, size: 24),
+              ),
+              const SizedBox(width: 15),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.language,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      l10n.languageSubtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<String>(
+              segments: [
+                ButtonSegment<String>(
+                  value: 'zh',
+                  label: Text(l10n.chinese),
+                ),
+                ButtonSegment<String>(
+                  value: 'en',
+                  label: Text(l10n.english),
+                ),
+              ],
+              selected: {_language},
+              onSelectionChanged: (Set<String> newSelection) async {
+                final newLanguage = newSelection.first;
+                setState(() {
+                  _language = newLanguage;
+                });
+
+                // 保存到设置
+                await _settingsService.setLanguage(newLanguage);
+
+                // 更新本地化服务
+                _localizationService.setLanguage(newLanguage);
+
+                // 显示提示
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        newLanguage == 'zh' ? l10n.languageChangedZh : l10n.languageChangedEn
+                      ),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildNavigationCard({

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pocket_fit/models/activity_record.dart';
 import 'package:pocket_fit/services/database_service.dart';
 import 'package:pocket_fit/models/sensor_data.dart';
+import 'package:pocket_fit/l10n/app_localizations.dart';
 
 class ActivityHistoryPage extends StatefulWidget {
   const ActivityHistoryPage({super.key});
@@ -42,7 +43,8 @@ class _ActivityHistoryPageState extends State<ActivityHistoryPage> {
         _isLoading = false;
       });
     } catch (e) {
-      print('ActivityHistoryPage: 加载活动记录失败 - $e');
+      final l10n = AppLocalizations.of(context);
+      print('ActivityHistoryPage: ${l10n.loadingFailed} - $e');
       setState(() {
         _isLoading = false;
       });
@@ -51,9 +53,11 @@ class _ActivityHistoryPageState extends State<ActivityHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('活动历史'),
+        title: Text(l10n.activityHistory),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -89,6 +93,8 @@ class _ActivityHistoryPageState extends State<ActivityHistoryPage> {
 
   /// 空状态
   Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(context);
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -100,7 +106,7 @@ class _ActivityHistoryPageState extends State<ActivityHistoryPage> {
           ),
           const SizedBox(height: 20),
           Text(
-            '暂无活动记录',
+            l10n.noActivityRecords,
             style: TextStyle(
               fontSize: 18,
               color: Colors.grey.shade600,
@@ -108,7 +114,7 @@ class _ActivityHistoryPageState extends State<ActivityHistoryPage> {
           ),
           const SizedBox(height: 10),
           Text(
-            '完成挑战后会在这里显示',
+            l10n.recordsWillShowHere,
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade500,
@@ -121,6 +127,8 @@ class _ActivityHistoryPageState extends State<ActivityHistoryPage> {
 
   /// 活动卡片
   Widget _buildActivityCard(ActivityRecord record) {
+    final l10n = AppLocalizations.of(context);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(16),
@@ -159,7 +167,7 @@ class _ActivityHistoryPageState extends State<ActivityHistoryPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      record.activityType.displayName,
+                      record.activityType.getDisplayName(context),
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -185,7 +193,7 @@ class _ActivityHistoryPageState extends State<ActivityHistoryPage> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '${record.count}次',
+                  '${record.count} ${l10n.times}',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -201,7 +209,7 @@ class _ActivityHistoryPageState extends State<ActivityHistoryPage> {
             children: [
               _buildInfoChip(
                 icon: Icons.timer_outlined,
-                label: '${record.durationInMinutes.toStringAsFixed(1)}分钟',
+                label: '${record.durationInMinutes.toStringAsFixed(1)} ${l10n.minutes}',
                 color: Colors.blue,
               ),
               const SizedBox(width: 10),
@@ -269,6 +277,7 @@ class _ActivityHistoryPageState extends State<ActivityHistoryPage> {
 
   /// 格式化日期时间
   String _formatDateTime(DateTime dateTime) {
+    final l10n = AppLocalizations.of(context);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
@@ -276,11 +285,17 @@ class _ActivityHistoryPageState extends State<ActivityHistoryPage> {
 
     String dateStr;
     if (targetDate == today) {
-      dateStr = '今天';
+      dateStr = l10n.today;
     } else if (targetDate == yesterday) {
-      dateStr = '昨天';
+      dateStr = l10n.yesterday;
     } else {
-      dateStr = '${dateTime.month}月${dateTime.day}日';
+      // 对于英文，使用 "MMM dd" 格式；对于中文，使用 "M月d日" 格式
+      if (l10n.locale.languageCode == 'en') {
+        final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        dateStr = '${months[dateTime.month - 1]} ${dateTime.day}';
+      } else {
+        dateStr = '${dateTime.month}月${dateTime.day}日';
+      }
     }
 
     final hour = dateTime.hour.toString().padLeft(2, '0');

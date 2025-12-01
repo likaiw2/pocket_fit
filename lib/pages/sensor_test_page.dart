@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pocket_fit/models/sensor_data.dart';
 import 'package:pocket_fit/services/sensor_service.dart';
+import 'package:pocket_fit/l10n/app_localizations.dart';
 
 class SensorTestPage extends StatefulWidget {
   const SensorTestPage({super.key});
@@ -76,9 +77,11 @@ class _SensorTestPageState extends State<SensorTestPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('传感器测试'),
+        title: Text(l10n.sensorTest),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
@@ -119,7 +122,7 @@ class _SensorTestPageState extends State<SensorTestPage> {
 
               // 陀螺仪数据
               _buildSensorCard(
-                title: '陀螺仪 (Gyroscope)',
+                title: l10n.gyroscope,
                 icon: Icons.rotate_right,
                 color: Colors.purple,
                 data: _currentGyroscope,
@@ -129,7 +132,7 @@ class _SensorTestPageState extends State<SensorTestPage> {
 
               // 加速度计数据
               _buildSensorCard(
-                title: '加速度计 (Accelerometer)',
+                title: l10n.accelerometer,
                 icon: Icons.speed,
                 color: Colors.blue,
                 data: _currentAccelerometer,
@@ -148,6 +151,7 @@ class _SensorTestPageState extends State<SensorTestPage> {
 
   // 运动状态卡片
   Widget _buildMotionStateCard() {
+    final l10n = AppLocalizations.of(context);
     final stats = _currentMotionStats;
     final state = stats?.state ?? MotionState.unknown;
 
@@ -159,17 +163,17 @@ class _SensorTestPageState extends State<SensorTestPage> {
       case MotionState.still:
         stateColor = Colors.green;
         stateIcon = Icons.airline_seat_recline_normal;
-        stateText = '静止';
+        stateText = l10n.still;
         break;
       case MotionState.moving:
         stateColor = Colors.orange;
         stateIcon = Icons.directions_run;
-        stateText = '运动中';
+        stateText = l10n.moving;
         break;
       case MotionState.unknown:
         stateColor = Colors.grey;
         stateIcon = Icons.help_outline;
-        stateText = '未知';
+        stateText = l10n.unknown;
         break;
     }
 
@@ -204,7 +208,7 @@ class _SensorTestPageState extends State<SensorTestPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '当前状态',
+                      l10n.currentState,
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade600,
@@ -231,9 +235,9 @@ class _SensorTestPageState extends State<SensorTestPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStatItem('方差', stats.variance.toStringAsFixed(2)),
-                _buildStatItem('均值', stats.mean.toStringAsFixed(2)),
-                _buildStatItem('标准差', stats.stdDeviation.toStringAsFixed(2)),
+                _buildStatItem(l10n.variance, stats.variance.toStringAsFixed(2)),
+                _buildStatItem(l10n.mean, stats.mean.toStringAsFixed(2)),
+                _buildStatItem(l10n.stdDeviation, stats.stdDeviation.toStringAsFixed(2)),
               ],
             ),
           ],
@@ -273,6 +277,8 @@ class _SensorTestPageState extends State<SensorTestPage> {
     required SensorData? data,
     required List<double> history,
   }) {
+    final l10n = AppLocalizations.of(context);
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -305,13 +311,13 @@ class _SensorTestPageState extends State<SensorTestPage> {
           ),
           const SizedBox(height: 15),
           if (data != null) ...[
-            _buildDataRow('X 轴', data.x, color),
+            _buildDataRow(l10n.xAxis, data.x, color),
             const SizedBox(height: 8),
-            _buildDataRow('Y 轴', data.y, color),
+            _buildDataRow(l10n.yAxis, data.y, color),
             const SizedBox(height: 8),
-            _buildDataRow('Z 轴', data.z, color),
+            _buildDataRow(l10n.zAxis, data.z, color),
             const SizedBox(height: 8),
-            _buildDataRow('模² (x²+y²+z²)', data.magnitudeSquared, color, isBold: true),
+            _buildDataRow(l10n.magnitudeSquared, data.magnitudeSquared, color, isBold: true),
             const SizedBox(height: 15),
             // 简单的历史数据可视化
             _buildSimpleChart(history, color),
@@ -320,7 +326,7 @@ class _SensorTestPageState extends State<SensorTestPage> {
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Text(
-                  '等待数据...',
+                  l10n.waitingForData,
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey.shade500,
@@ -361,6 +367,8 @@ class _SensorTestPageState extends State<SensorTestPage> {
 
   // 简单的图表显示
   Widget _buildSimpleChart(List<double> history, Color color) {
+    final l10n = AppLocalizations.of(context);
+
     if (history.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -377,14 +385,14 @@ class _SensorTestPageState extends State<SensorTestPage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '历史数据',
+              l10n.historicalData,
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey.shade600,
               ),
             ),
             Text(
-              '范围: ${minValue.toStringAsFixed(2)} - ${maxValue.toStringAsFixed(2)}',
+              '${l10n.range}: ${minValue.toStringAsFixed(2)} - ${maxValue.toStringAsFixed(2)}',
               style: TextStyle(
                 fontSize: 11,
                 color: Colors.grey.shade500,
@@ -423,7 +431,7 @@ class _SensorTestPageState extends State<SensorTestPage> {
               ),
             ),
             Text(
-              '数据点: ${history.length}',
+              '${l10n.dataPoints}: ${history.length}',
               style: TextStyle(
                 fontSize: 11,
                 color: Colors.grey.shade500,
@@ -437,6 +445,7 @@ class _SensorTestPageState extends State<SensorTestPage> {
 
   // 缓冲区信息卡片
   Widget _buildBufferInfoCard() {
+    final l10n = AppLocalizations.of(context);
     final stats = _sensorService.getBufferStats();
 
     return Container(
@@ -460,7 +469,7 @@ class _SensorTestPageState extends State<SensorTestPage> {
               Icon(Icons.storage, color: Colors.teal, size: 24),
               const SizedBox(width: 10),
               Text(
-                '缓冲区信息',
+                l10n.bufferInfo,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -470,23 +479,23 @@ class _SensorTestPageState extends State<SensorTestPage> {
             ],
           ),
           const SizedBox(height: 15),
-          _buildInfoRow('加速度计缓冲区',
+          _buildInfoRow(l10n.accelerometerBuffer,
               '${stats['accelerometerBufferSize']} / ${stats['maxBufferSize']}'),
           const SizedBox(height: 8),
-          _buildInfoRow('陀螺仪缓冲区',
+          _buildInfoRow(l10n.gyroscopeBuffer,
               '${stats['gyroscopeBufferSize']} / ${stats['maxBufferSize']}'),
           const SizedBox(height: 8),
-          _buildInfoRow('当前采样间隔', '${stats['currentSamplingInterval']} ms'),
+          _buildInfoRow(l10n.samplingInterval, '${stats['currentSamplingInterval']} ms'),
           const SizedBox(height: 8),
-          _buildInfoRow('运动状态', _getMotionStateText(stats['motionState'])),
+          _buildInfoRow(l10n.currentState, _getMotionStateText(stats['motionState'])),
           const SizedBox(height: 12),
-          Text('采样频率配置', style: TextStyle(fontSize: 13, color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+          Text(l10n.samplingConfig, style: TextStyle(fontSize: 13, color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          _buildInfoRow('  静止频率', '${stats['stillInterval']} ms (0.5 Hz)'),
+          _buildInfoRow('  ${l10n.stillFrequency}', '${stats['stillInterval']} ms (0.5 Hz)'),
           const SizedBox(height: 8),
-          _buildInfoRow('  未知频率', '${stats['unknownInterval']} ms (1 Hz)'),
+          _buildInfoRow('  ${l10n.unknownFrequency}', '${stats['unknownInterval']} ms (1 Hz)'),
           const SizedBox(height: 8),
-          _buildInfoRow('  运动频率', '${stats['movingInterval']} ms (10 Hz)'),
+          _buildInfoRow('  ${l10n.movingFrequency}', '${stats['movingInterval']} ms (10 Hz)'),
         ],
       ),
     );
@@ -515,16 +524,18 @@ class _SensorTestPageState extends State<SensorTestPage> {
     );
   }
 
-  /// 获取运动状态的中文文本
+  /// 获取运动状态的文本
   String _getMotionStateText(String? stateString) {
-    if (stateString == null) return '未知';
+    final l10n = AppLocalizations.of(context);
+
+    if (stateString == null) return l10n.unknown;
 
     if (stateString.contains('still')) {
-      return '🟢 静止';
+      return '🟢 ${l10n.still}';
     } else if (stateString.contains('moving')) {
-      return '🔴 运动中';
+      return '🔴 ${l10n.moving}';
     } else {
-      return '⚪ 未知';
+      return '⚪ ${l10n.unknown}';
     }
   }
 }

@@ -25,7 +25,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace = "com.example.pocket_fit"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "25.1.8937393"
 
     compileOptions {
@@ -36,6 +36,7 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        freeCompilerArgs += ['-Xskip-metadata-version-check']
     }
 
     defaultConfig {
@@ -43,7 +44,7 @@ android {
         applicationId = "com.example.pocket_fit"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
-        minSdk = 21
+        minSdkVersion 26  // Required by tflite_flutter
         targetSdk = 35
         versionCode = flutterVersionCode.toInteger()
         versionName = flutterVersionName
@@ -64,4 +65,6 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+    // TensorFlow Lite Select TF Ops - Required for LSTM models
+    implementation 'org.tensorflow:tensorflow-lite-select-tf-ops:2.14.0'
 }

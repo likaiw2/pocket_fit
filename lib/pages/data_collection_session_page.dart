@@ -112,7 +112,7 @@ class _DataCollectionSessionPageState extends State<DataCollectionSessionPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('运动类型: ${dataSet.activityType.displayName}'),
+              Text('运动类型: ${dataSet.activityType.getDisplayName(context)}'),
               Text('目标次数: ${dataSet.repetitionCount}'),
               Text('数据点数: ${dataSet.dataPoints.length}'),
               Text('持续时间: ${dataSet.duration.toStringAsFixed(1)}秒'),
@@ -144,7 +144,7 @@ class _DataCollectionSessionPageState extends State<DataCollectionSessionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('采集 - ${widget.activityType.displayName}'),
+        title: Text('采集 - ${widget.activityType.getDisplayName(context)}'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: SafeArea(
@@ -162,7 +162,7 @@ class _DataCollectionSessionPageState extends State<DataCollectionSessionPage> {
 
               // 运动名称
               Text(
-                widget.activityType.displayName,
+                widget.activityType.getDisplayName(context),
                 style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:pocket_fit/models/sensor_data.dart';
 import 'package:pocket_fit/services/activity_recognition_service.dart';
 import 'package:pocket_fit/services/feedback_service.dart';
+import 'package:pocket_fit/l10n/app_localizations.dart';
 
 /// 活动挑战页面
 class ActivityChallengePage extends StatefulWidget {
@@ -191,24 +192,26 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
     _feedbackService.challengeCompleteFeedback();
 
     // 显示完成对话框
+    final l10n = AppLocalizations.of(context);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Text('🎉 挑战完成！', style: TextStyle(color: Colors.green.shade700)),
+            Text('🎉 ${l10n.congratulations}', style: TextStyle(color: Colors.green.shade700)),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '恭喜你完成了 ${_challengeType?.displayName} 挑战！',
+              l10n.challengeCompleted(_challengeType?.getDisplayName(context) ?? ''),
               style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 10),
             Text(
-              '完成次数: $_challengeProgress / $_challengeTarget',
+              '${l10n.completionCount}: $_challengeProgress / $_challengeTarget',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -223,14 +226,14 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
               Navigator.pop(context);
               _recognitionService.resetCounts();
             },
-            child: const Text('再来一次'),
+            child: Text(l10n.tryAgain),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               Navigator.pop(context);
             },
-            child: const Text('返回首页'),
+            child: Text(l10n.backToHome),
           ),
         ],
       ),
@@ -252,9 +255,11 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('活动挑战'),
+        title: Text(l10n.activityChallenge),
         backgroundColor: Colors.blue.shade700,
         foregroundColor: Colors.white,
       ),
@@ -282,12 +287,14 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
 
   /// 倒计时视图
   Widget _buildCountdownView() {
+    final l10n = AppLocalizations.of(context);
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            '准备开始',
+            l10n.preparingStart,
             style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -322,7 +329,7 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
           ),
           const SizedBox(height: 40),
           Text(
-            '${_challengeType?.displayName} 挑战',
+            '${_challengeType?.getDisplayName(context)} ${l10n.challenge}',
             style: TextStyle(
               fontSize: 24,
               color: Colors.grey.shade700,
@@ -335,8 +342,9 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
 
   /// 挑战进行中视图
   Widget _buildChallengeView() {
+    final l10n = AppLocalizations.of(context);
     final progress = _challengeProgress / _challengeTarget;
-    
+
     return Padding(
       padding: const EdgeInsets.all(20.0),
       child: Column(
@@ -350,7 +358,7 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
               child: Column(
                 children: [
                   Text(
-                    '当前动作',
+                    l10n.currentAction,
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey.shade600,
@@ -363,7 +371,7 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    _currentActivity.displayName,
+                    _currentActivity.getDisplayName(context),
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -372,7 +380,7 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
                   if (_currentConfidence > 0) ...[
                     const SizedBox(height: 5),
                     Text(
-                      '置信度: ${(_currentConfidence * 100).toStringAsFixed(0)}%',
+                      '${l10n.confidence}: ${(_currentConfidence * 100).toStringAsFixed(0)}%',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade600,
@@ -397,7 +405,7 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '${_challengeType?.displayName} 挑战',
+                        '${_challengeType?.getDisplayName(context)} ${l10n.challenge}',
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -486,9 +494,9 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text(
-                '取消挑战',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              child: Text(
+                l10n.cancelChallenge,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -499,13 +507,15 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
 
   /// 挑战选择视图
   Widget _buildChallengeSelection() {
+    final l10n = AppLocalizations.of(context);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '选择挑战',
+            l10n.selectChallenge,
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -514,42 +524,42 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
           ),
           const SizedBox(height: 10),
           Text(
-            '完成指定次数的动作来挑战自己！',
+            l10n.challengeDescription,
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey.shade600,
             ),
           ),
           const SizedBox(height: 30),
-          
+
           _buildChallengeCard(
             type: ActivityType.jumping,
             target: 10,
-            description: '原地跳跃10次',
+            description: l10n.jumpingChallenge(10),
             color: Colors.orange,
           ),
           const SizedBox(height: 15),
-          
+
           _buildChallengeCard(
             type: ActivityType.squatting,
             target: 15,
-            description: '深蹲15次',
+            description: l10n.squattingChallenge(15),
             color: Colors.purple,
           ),
           const SizedBox(height: 15),
-          
+
           _buildChallengeCard(
             type: ActivityType.waving,
             target: 20,
-            description: '挥手20次',
+            description: l10n.wavingChallenge(20),
             color: Colors.teal,
           ),
           const SizedBox(height: 15),
-          
+
           _buildChallengeCard(
             type: ActivityType.shaking,
             target: 30,
-            description: '摇晃手机30次',
+            description: l10n.shakingChallenge(30),
             color: Colors.pink,
           ),
           const SizedBox(height: 15),
@@ -557,7 +567,7 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
           _buildChallengeCard(
             type: ActivityType.figureEight,
             target: 12,
-            description: '八字形绕圈12次',
+            description: l10n.figureEightChallenge(12),
             color: Colors.indigo,
           ),
         ],
@@ -602,7 +612,7 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      type.displayName,
+                      type.getDisplayName(context),
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,

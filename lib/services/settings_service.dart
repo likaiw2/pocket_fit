@@ -18,6 +18,8 @@ class SettingsService {
   static const String _keyNotificationsEnabled = 'notifications_enabled';
   static const String _keyVibrationEnabled = 'vibration_enabled';
   static const String _keySoundEnabled = 'sound_enabled';
+  static const String _keyUseDLDetection = 'use_dl_detection';
+  static const String _keyLanguage = 'language';
 
   // 默认值
   static const int _defaultDailyActivityGoal = 30; // 30分钟
@@ -26,6 +28,8 @@ class SettingsService {
   static const bool _defaultNotificationsEnabled = true;
   static const bool _defaultVibrationEnabled = true;
   static const bool _defaultSoundEnabled = true;
+  static const bool _defaultUseDLDetection = false; // 默认使用传统方法
+  static const String _defaultLanguage = 'zh'; // 默认中文
 
   /// 初始化服务
   Future<void> initialize() async {
@@ -127,6 +131,21 @@ class SettingsService {
     print('SettingsService: 声音已${enabled ? '启用' : '禁用'}');
   }
 
+  // ==================== 深度学习检测 ====================
+
+  /// 获取深度学习检测开关状态
+  Future<bool> getUseDLDetection() async {
+    final p = await prefs;
+    return p.getBool(_keyUseDLDetection) ?? _defaultUseDLDetection;
+  }
+
+  /// 设置深度学习检测开关状态
+  Future<void> setUseDLDetection(bool enabled) async {
+    final p = await prefs;
+    await p.setBool(_keyUseDLDetection, enabled);
+    print('SettingsService: 深度学习检测已${enabled ? '启用' : '禁用'}');
+  }
+
   // ==================== 批量操作 ====================
 
   /// 重置所有设置为默认值
@@ -137,8 +156,26 @@ class SettingsService {
     await setNotificationsEnabled(_defaultNotificationsEnabled);
     await setVibrationEnabled(_defaultVibrationEnabled);
     await setSoundEnabled(_defaultSoundEnabled);
+    await setUseDLDetection(_defaultUseDLDetection);
     print('SettingsService: 所有设置已重置为默认值');
   }
+
+  // ==================== 语言设置 ====================
+
+  /// 获取语言设置
+  Future<String> getLanguage() async {
+    final p = await prefs;
+    return p.getString(_keyLanguage) ?? _defaultLanguage;
+  }
+
+  /// 设置语言
+  Future<void> setLanguage(String language) async {
+    final p = await prefs;
+    await p.setString(_keyLanguage, language);
+    print('SettingsService: 语言已设置为 $language');
+  }
+
+  // ==================== 其他 ====================
 
   /// 获取所有设置的摘要
   Future<Map<String, dynamic>> getAllSettings() async {
@@ -149,6 +186,8 @@ class SettingsService {
       'notificationsEnabled': await getNotificationsEnabled(),
       'vibrationEnabled': await getVibrationEnabled(),
       'soundEnabled': await getSoundEnabled(),
+      'useDLDetection': await getUseDLDetection(),
+      'language': await getLanguage(),
     };
   }
 }

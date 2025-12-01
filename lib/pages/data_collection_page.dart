@@ -182,7 +182,7 @@ class DataCollectionPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  type.displayName,
+                  type.getDisplayName(context),
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,

@@ -5,6 +5,7 @@ import 'package:pocket_fit/models/activity_record.dart';
 import 'package:pocket_fit/models/sedentary_record.dart';
 import 'package:pocket_fit/services/statistics_service.dart';
 import 'package:pocket_fit/services/database_service.dart';
+import 'package:pocket_fit/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 
 class StatisticsPage extends StatefulWidget {
@@ -101,6 +102,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -126,7 +129,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                       children: [
                         // 标题
                         Text(
-                          '活动统计',
+                          l10n.activityStatistics,
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
@@ -135,7 +138,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '查看你的健康数据',
+                          l10n.viewHealthData,
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.grey.shade600,
@@ -172,6 +175,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   // 时间段选择器
   Widget _buildPeriodSelector() {
+    final l10n = AppLocalizations.of(context);
+    final periods = [
+      {'key': '日', 'label': l10n.day},
+      {'key': '周', 'label': l10n.week},
+      {'key': '月', 'label': l10n.month},
+    ];
+
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -179,13 +189,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
-        children: ['日', '周', '月'].map((period) {
-          final isSelected = _selectedPeriod == period;
+        children: periods.map((period) {
+          final isSelected = _selectedPeriod == period['key'];
           return Expanded(
             child: GestureDetector(
               onTap: () {
                 setState(() {
-                  _selectedPeriod = period;
+                  _selectedPeriod = period['key']!;
                 });
                 _loadStatistics(); // 重新加载数据
               },
@@ -196,7 +206,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  period,
+                  period['label']!,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
@@ -214,6 +224,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   // 总览卡片
   Widget _buildOverviewCard() {
+    final l10n = AppLocalizations.of(context);
+
     // 计算总计
     double totalActivityDuration = 0;
     int totalActivityCount = 0;
@@ -226,6 +238,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
       totalSedentaryDuration += stat.totalSedentaryDuration;
       totalWarnings += stat.sedentaryWarningCount + stat.sedentaryCriticalCount;
     }
+
+    // 获取当前时间段的翻译标签
+    String periodLabel = _selectedPeriod == '日' ? l10n.day :
+                        (_selectedPeriod == '周' ? l10n.week : l10n.month);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -244,7 +260,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '本$_selectedPeriod概览',
+            l10n.periodOverview(periodLabel),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -257,9 +273,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
               Expanded(
                 child: _buildOverviewItem(
                   icon: Icons.directions_run,
-                  label: '总活动',
+                  label: l10n.totalActivity,
                   value: totalActivityDuration.toStringAsFixed(0),
-                  unit: '分钟',
+                  unit: l10n.minutes,
                   color: Colors.green,
                 ),
               ),
@@ -267,9 +283,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
               Expanded(
                 child: _buildOverviewItem(
                   icon: Icons.check_circle,
-                  label: '完成次数',
+                  label: l10n.completionCount,
                   value: totalActivityCount.toString(),
-                  unit: '次',
+                  unit: l10n.times,
                   color: Colors.blue,
                 ),
               ),
@@ -281,9 +297,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
               Expanded(
                 child: _buildOverviewItem(
                   icon: Icons.event_seat,
-                  label: '久坐时长',
+                  label: l10n.sedentaryTime,
                   value: totalSedentaryDuration.toStringAsFixed(0),
-                  unit: '分钟',
+                  unit: l10n.minutes,
                   color: Colors.orange,
                 ),
               ),
@@ -291,9 +307,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
               Expanded(
                 child: _buildOverviewItem(
                   icon: Icons.warning,
-                  label: '久坐警告',
+                  label: l10n.sedentaryWarning,
                   value: totalWarnings.toString(),
-                  unit: '次',
+                  unit: l10n.times,
                   color: Colors.red,
                 ),
               ),
@@ -354,6 +370,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   // 活动分布卡片
   Widget _buildActivityDistribution() {
+    final l10n = AppLocalizations.of(context);
+
     if (_activityDistribution == null || _activityDistribution!.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(20),
@@ -373,7 +391,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
             Icon(Icons.bar_chart, size: 48, color: Colors.grey.shade300),
             const SizedBox(height: 10),
             Text(
-              '暂无活动数据',
+              l10n.noActivityData,
               style: TextStyle(fontSize: 16, color: Colors.grey.shade500),
             ),
           ],
@@ -401,7 +419,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '活动类型分布',
+            l10n.activityTypeDistribution,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -420,11 +438,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '${entry.key.emoji} ${entry.key.displayName}',
+                        '${entry.key.emoji} ${entry.key.getDisplayName(context)}',
                         style: const TextStyle(fontSize: 14),
                       ),
                       Text(
-                        '${entry.value}次 (${percentage.toStringAsFixed(1)}%)',
+                        l10n.timesWithPercentage(entry.value, percentage.toStringAsFixed(1)),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -454,6 +472,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   // 详细数据列表
   Widget _buildDetailsList() {
+    final l10n = AppLocalizations.of(context);
+
     if (_periodStats.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(20),
@@ -466,7 +486,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
             Icon(Icons.inbox, size: 48, color: Colors.grey.shade300),
             const SizedBox(height: 10),
             Text(
-              '暂无活动记录',
+              l10n.noActivityRecords,
               style: TextStyle(fontSize: 16, color: Colors.grey.shade500),
             ),
           ],
@@ -478,7 +498,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '每日统计',
+          l10n.dailyStatistics,
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -526,7 +546,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          stat.meetsActivityGoal ? '✓ 达标' : '未达标',
+                          stat.meetsActivityGoal ? l10n.achieved : l10n.notAchieved,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -541,21 +561,21 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     children: [
                       Expanded(
                         child: _buildStatItem(
-                          '活动',
-                          '${stat.totalActivityDuration.toStringAsFixed(0)}分钟',
+                          l10n.activity,
+                          '${stat.totalActivityDuration.toStringAsFixed(0)}${l10n.minutes}',
                           Colors.green,
                         ),
                       ),
                       Expanded(
                         child: _buildStatItem(
-                          '次数',
-                          '${stat.totalActivityCount}次',
+                          l10n.count,
+                          '${stat.totalActivityCount}${l10n.times}',
                           Colors.blue,
                         ),
                       ),
                       Expanded(
                         child: _buildStatItem(
-                          '活动率',
+                          l10n.activityRate,
                           '${activityRate.toStringAsFixed(0)}%',
                           Colors.purple,
                         ),
@@ -595,15 +615,16 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
 
   String _formatDate(DateTime date) {
+    final l10n = AppLocalizations.of(context);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     final targetDate = DateTime(date.year, date.month, date.day);
 
     if (targetDate == today) {
-      return '今天';
+      return l10n.today;
     } else if (targetDate == yesterday) {
-      return '昨天';
+      return l10n.yesterday;
     } else {
       return '${date.month}月${date.day}日';
     }
@@ -611,6 +632,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   // 时间线视图
   Widget _buildTimeline() {
+    final l10n = AppLocalizations.of(context);
+
     if (_activityRecords.isEmpty && _sedentaryRecords.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(40),
@@ -631,7 +654,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
               Icon(Icons.timeline, size: 48, color: Colors.grey.shade400),
               const SizedBox(height: 16),
               Text(
-                '暂无时间线数据',
+                l10n.noTimelineData,
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey.shade600,
@@ -639,7 +662,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                '完成一些活动挑战后，这里会显示你的活动时间线',
+                l10n.timelineDescription,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
@@ -695,7 +718,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
               Icon(Icons.timeline, color: Colors.blue.shade700, size: 24),
               const SizedBox(width: 10),
               Text(
-                '活动时间线',
+                l10n.activityTimeline,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -717,7 +740,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
               padding: const EdgeInsets.only(top: 16),
               child: Center(
                 child: Text(
-                  '显示最近 20 条记录（共 ${timelineEvents.length} 条）',
+                  l10n.showingRecentRecords(20, timelineEvents.length),
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey.shade500,
@@ -777,7 +800,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 Row(
                   children: [
                     Text(
-                      record.activityType.displayName,
+                      record.activityType.getDisplayName(context),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -836,21 +859,22 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   // 久坐时间线项
   Widget _buildSedentaryTimelineItem(SedentaryRecord record) {
+    final l10n = AppLocalizations.of(context);
     final timeFormat = DateFormat('HH:mm');
     final dateFormat = DateFormat('MM月dd日');
 
     MaterialColor colorMaterial = Colors.orange;
     IconData icon = Icons.event_seat;
-    String statusText = '久坐';
+    String statusText = l10n.sedentary;
 
     if (record.isCriticalLevel) {
       colorMaterial = Colors.red;
       icon = Icons.warning;
-      statusText = '严重久坐';
+      statusText = l10n.criticalSedentary;
     } else if (record.isWarningLevel) {
       colorMaterial = Colors.orange;
       icon = Icons.warning_amber;
-      statusText = '久坐警告';
+      statusText = l10n.sedentaryWarning;
     }
 
     return Container(
@@ -911,7 +935,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Text(
-                          '已中断',
+                          l10n.interrupted,
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.green.shade700,

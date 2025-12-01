@@ -5,6 +5,8 @@ import 'package:pocket_fit/models/activity_record.dart';
 import 'package:pocket_fit/services/sensor_service.dart';
 import 'package:pocket_fit/services/feedback_service.dart';
 import 'package:pocket_fit/services/statistics_service.dart';
+import 'package:pocket_fit/services/ml_inference_service.dart';
+import 'package:pocket_fit/services/settings_service.dart';
 
 /// 活动识别服务
 /// 基于传感器数据识别具体的运动类型（跳跃、深蹲、挥手等）
@@ -16,6 +18,13 @@ class ActivityRecognitionService {
   final _sensorService = SensorService();
   final _feedbackService = FeedbackService();
   final _statisticsService = StatisticsService();
+  final _mlService = MLInferenceService();
+  final _settingsService = SettingsService();
+
+  // ML 检测相关
+  bool _useDLDetection = false;
+  String? _lastMLActivity;
+  int _lastMLCount = 0;
 
   // 挑战会话跟踪
   DateTime? _challengeStartTime;
@@ -74,6 +83,22 @@ class ActivityRecognitionService {
     // 确保传感器服务已启动
     await _sensorService.start();
 
+    // 初始化设置服务并加载 DL 检测设置
+    await _settingsService.initialize();
+    _useDLDetection = await _settingsService.getUseDLDetection();
+    print('ActivityRecognitionService: DL检测模式 = $_useDLDetection');
+
+    // 如果启用了 DL 检测，初始化 ML 服务
+    if (_useDLDetection) {
+      try {
+        await _mlService.initialize();
+        print('ActivityRecognitionService: ML服务初始化成功');
+      } catch (e) {
+        print('ActivityRecognitionService: ML服务初始化失败 - $e');
+        _useDLDetection = false; // 回退到传统方法
+      }
+    }
+
     // 订阅传感器数据
     _accelSubscription = _sensorService.accelerometerStream.listen(_onAccelerometerData);
     _gyroSubscription = _sensorService.gyroscopeStream.listen(_onGyroscopeData);
@@ -106,6 +131,15 @@ class ActivityRecognitionService {
     if (_accelBuffer.length > _bufferSize) {
       _accelBuffer.removeAt(0);
     }
+
+    // 如果启用了 DL 检测，将数据添加到 ML 服务
+    if (_useDLDetection && _gyroBuffer.isNotEmpty) {
+      final latestGyro = _gyroBuffer.last;
+      _mlService.addSensorData(
+        data.x, data.y, data.z,
+        latestGyro.x, latestGyro.y, latestGyro.z,
+      );
+    }
   }
 
   /// 处理陀螺仪数据
@@ -114,10 +148,94 @@ class ActivityRecognitionService {
     if (_gyroBuffer.length > _bufferSize) {
       _gyroBuffer.removeAt(0);
     }
+
+    // 如果启用了 DL 检测，将数据添加到 ML 服务
+    if (_useDLDetection && _accelBuffer.isNotEmpty) {
+      final latestAccel = _accelBuffer.last;
+      _mlService.addSensorData(
+        latestAccel.x, latestAccel.y, latestAccel.z,
+        data.x, data.y, data.z,
+      );
+    }
   }
 
   /// 分析活动类型
   void _analyzeActivity() {
+    // 如果启用了 DL 检测，使用 ML 服务
+    if (_useDLDetection) {
+      _analyzeActivityWithML();
+      return;
+    }
+
+    // 否则使用传统算法
+    _analyzeActivityTraditional();
+  }
+
+  /// 使用 ML 模型分析活动
+  void _analyzeActivityWithML() {
+    // 尝试预测活动类型
+    final mlActivity = _mlService.predictActivity();
+
+    if (mlActivity != null) {
+      // 计算计数
+      final count = _mlService.countRepetitions(mlActivity);
+
+      // 检查是否有新的活动或计数变化
+      if (mlActivity != _lastMLActivity || count != _lastMLCount) {
+        _lastMLActivity = mlActivity;
+        _lastMLCount = count;
+
+        // 转换 ML 活动类型到 ActivityType
+        final activityType = _mlActivityToActivityType(mlActivity);
+
+        if (activityType != _currentActivity) {
+          _currentActivity = activityType;
+
+          final result = ActivityRecognitionResult(
+            activityType: activityType,
+            confidence: 0.92, // ML 模型的验证准确率
+            timestamp: DateTime.now(),
+            features: {
+              'ml_count': count.toDouble(),
+            },
+          );
+
+          _activityController.add(result);
+          print('ActivityRecognitionService: ML识别到活动 - ${activityType.displayName} (计数: $count)');
+        }
+
+        // 更新计数
+        if (count > (_activityCounts[activityType] ?? 0)) {
+          _activityCounts[activityType] = count;
+          _activityCountController.add(Map.from(_activityCounts));
+
+          // 触发反馈
+          _feedbackService.activityCountFeedback(activityType);
+        }
+      }
+    }
+  }
+
+  /// 将 ML 活动类型转换为 ActivityType
+  ActivityType _mlActivityToActivityType(String mlActivity) {
+    switch (mlActivity) {
+      case 'jumping':
+        return ActivityType.jumping;
+      case 'squatting':
+        return ActivityType.squatting;
+      case 'waving':
+        return ActivityType.waving;
+      case 'shaking':
+        return ActivityType.shaking;
+      case 'figureEight':
+        return ActivityType.figureEight;
+      default:
+        return ActivityType.idle;
+    }
+  }
+
+  /// 使用传统算法分析活动
+  void _analyzeActivityTraditional() {
     // 使用滑动窗口：只取最近的 15 个数据点（约 1.5 秒）
     // 这样可以快速响应动作的开始和结束
     final windowSize = min(15, min(_accelBuffer.length, _gyroBuffer.length));

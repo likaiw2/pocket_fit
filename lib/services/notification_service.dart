@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:vibration/vibration.dart';
+import 'package:pocket_fit/services/localization_service.dart';
 
 /// 通知服务 - 处理久坐提醒通知和振动反馈
 class NotificationService {
@@ -11,6 +12,9 @@ class NotificationService {
 
   // 通知插件实例
   final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+
+  // 本地化服务
+  final LocalizationService _localizationService = LocalizationService();
 
   // 通知设置
   bool _notificationsEnabled = true;
@@ -84,10 +88,23 @@ class NotificationService {
   Future<void> showSedentaryWarning(int minutes) async {
     if (!_notificationsEnabled) return;
 
+    // 获取当前语言
+    final isZh = _localizationService.currentLanguage == 'zh';
+
+    // 根据语言选择文本
+    final channelName = isZh ? '久坐提醒' : 'Sedentary Reminder';
+    final channelDesc = isZh
+        ? '提醒您已经久坐一段时间，建议起身活动'
+        : 'Reminds you when you\'ve been sitting for a while';
+    final title = isZh ? '⚠️ 久坐提醒' : '⚠️ Sedentary Reminder';
+    final body = isZh
+        ? '您已经久坐 $minutes 分钟了，建议起身活动一下！'
+        : 'You\'ve been sitting for $minutes minutes, time to get up and move!';
+
     final androidDetails = AndroidNotificationDetails(
       'sedentary_warning',
-      '久坐提醒',
-      channelDescription: '提醒您已经久坐一段时间，建议起身活动',
+      channelName,
+      channelDescription: channelDesc,
       importance: Importance.high,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',
@@ -109,8 +126,8 @@ class NotificationService {
 
     await _notifications.show(
       _sedentaryWarningNotificationId,
-      '⚠️ 久坐提醒',
-      '您已经久坐 $minutes 分钟了，建议起身活动一下！',
+      title,
+      body,
       details,
       payload: 'sedentary_warning',
     );
@@ -127,19 +144,33 @@ class NotificationService {
   Future<void> showSedentaryCritical(int minutes) async {
     if (!_notificationsEnabled) return;
 
+    // 获取当前语言
+    final isZh = _localizationService.currentLanguage == 'zh';
+
+    // 根据语言选择文本
+    final channelName = isZh ? '严重久坐警告' : 'Critical Sedentary Warning';
+    final channelDesc = isZh
+        ? '您已经久坐很长时间，强烈建议立即起身活动'
+        : 'Strong reminder to get up and move after prolonged sitting';
+    final title = isZh ? '🚨 严重久坐警告！' : '🚨 Critical Sedentary Warning!';
+    final body = isZh
+        ? '您已经久坐超过 $minutes 分钟了！请立即起身活动！'
+        : 'You\'ve been sitting for over $minutes minutes! Please get up immediately!';
+    final bigText = isZh
+        ? '您已经久坐超过 $minutes 分钟了！长时间久坐对健康不利，请立即起身活动，做一些简单的伸展运动。'
+        : 'You\'ve been sitting for over $minutes minutes! Prolonged sitting is harmful to your health. Please get up immediately and do some simple stretching exercises.';
+
     final androidDetails = AndroidNotificationDetails(
       'sedentary_critical',
-      '严重久坐警告',
-      channelDescription: '您已经久坐很长时间，强烈建议立即起身活动',
+      channelName,
+      channelDescription: channelDesc,
       importance: Importance.max,
       priority: Priority.max,
       icon: '@mipmap/ic_launcher',
       color: const Color(0xFFF44336), // 红色
       enableVibration: true,
       playSound: true,
-      styleInformation: BigTextStyleInformation(
-        '您已经久坐超过 $minutes 分钟了！长时间久坐对健康不利，请立即起身活动，做一些简单的伸展运动。',
-      ),
+      styleInformation: BigTextStyleInformation(bigText),
     );
 
     const iosDetails = DarwinNotificationDetails(
@@ -155,8 +186,8 @@ class NotificationService {
 
     await _notifications.show(
       _sedentaryCriticalNotificationId,
-      '🚨 严重久坐警告！',
-      '您已经久坐超过 $minutes 分钟了！请立即起身活动！',
+      title,
+      body,
       details,
       payload: 'sedentary_critical',
     );
@@ -173,14 +204,27 @@ class NotificationService {
   Future<void> showActivityDetected() async {
     if (!_notificationsEnabled) return;
 
-    const androidDetails = AndroidNotificationDetails(
+    // 获取当前语言
+    final isZh = _localizationService.currentLanguage == 'zh';
+
+    // 根据语言选择文本
+    final channelName = isZh ? '活动检测' : 'Activity Detection';
+    final channelDesc = isZh
+        ? '检测到您开始活动'
+        : 'Notifies when activity is detected';
+    final title = isZh ? '🟢 活动检测' : '🟢 Activity Detected';
+    final body = isZh
+        ? '太棒了！检测到您开始活动，继续保持！'
+        : 'Great! Activity detected, keep it up!';
+
+    final androidDetails = AndroidNotificationDetails(
       'activity_detected',
-      '活动检测',
-      channelDescription: '检测到您开始活动',
+      channelName,
+      channelDescription: channelDesc,
       importance: Importance.low,
       priority: Priority.low,
       icon: '@mipmap/ic_launcher',
-      color: Color(0xFF4CAF50), // 绿色
+      color: const Color(0xFF4CAF50), // 绿色
       enableVibration: false,
       playSound: false,
     );
@@ -191,15 +235,15 @@ class NotificationService {
       presentSound: false,
     );
 
-    const details = NotificationDetails(
+    final details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
 
     await _notifications.show(
       3,
-      '🟢 活动检测',
-      '太棒了！检测到您开始活动，继续保持！',
+      title,
+      body,
       details,
       payload: 'activity_detected',
     );
