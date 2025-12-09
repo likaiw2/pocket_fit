@@ -192,7 +192,7 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
     _feedbackService.challengeCompleteFeedback();
 
     // 显示完成对话框
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     showDialog(
       context: context,
@@ -255,7 +255,7 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
@@ -287,7 +287,7 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
 
   /// 倒计时视图
   Widget _buildCountdownView() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Center(
       child: Column(
@@ -342,7 +342,7 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
 
   /// 挑战进行中视图
   Widget _buildChallengeView() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final progress = _challengeProgress / _challengeTarget;
 
     return Padding(
@@ -507,7 +507,7 @@ class _ActivityChallengePageState extends State<ActivityChallengePage> with Sing
 
   /// 挑战选择视图
   Widget _buildChallengeSelection() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20.0),

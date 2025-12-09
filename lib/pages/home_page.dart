@@ -182,7 +182,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   // 欢迎区域
   Widget _buildWelcomeSection() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final hour = DateTime.now().hour;
     String greeting = l10n.goodMorning;
     if (hour >= 12 && hour < 18) {
@@ -226,7 +226,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   // 当前久坐时长卡片
   Widget _buildCurrentSedentaryCard() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final minutes = _currentSedentaryDuration.inMinutes;
     final seconds = _currentSedentaryDuration.inSeconds % 60;
 
@@ -398,7 +398,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   /// 获取运动状态描述
   String _getMotionStateDescription() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     switch (_currentMotionState) {
       case MotionState.still:
         final minutes = _currentSedentaryDuration.inMinutes;
@@ -420,7 +420,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   // 今日统计卡片
   Widget _buildTodayStatsCard() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     if (_isLoadingStats) {
       return Container(
@@ -615,7 +615,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   // 快速操作按钮
   Widget _buildQuickActions() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -715,7 +715,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   // 功能介绍
   Widget _buildFeaturesSection() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

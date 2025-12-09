@@ -102,7 +102,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: Container(
@@ -175,7 +175,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   // 时间段选择器
   Widget _buildPeriodSelector() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final periods = [
       {'key': '日', 'label': l10n.day},
       {'key': '周', 'label': l10n.week},
@@ -224,7 +224,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   // 总览卡片
   Widget _buildOverviewCard() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     // 计算总计
     double totalActivityDuration = 0;
@@ -370,7 +370,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   // 活动分布卡片
   Widget _buildActivityDistribution() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     if (_activityDistribution == null || _activityDistribution!.isEmpty) {
       return Container(
@@ -472,7 +472,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   // 详细数据列表
   Widget _buildDetailsList() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     if (_periodStats.isEmpty) {
       return Container(
@@ -615,7 +615,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
 
   String _formatDate(DateTime date) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
@@ -632,7 +632,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   // 时间线视图
   Widget _buildTimeline() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     if (_activityRecords.isEmpty && _sedentaryRecords.isEmpty) {
       return Container(
@@ -815,7 +815,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        '${record.count}次',
+                        '${record.count} times',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.green.shade700,
@@ -859,7 +859,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   // 久坐时间线项
   Widget _buildSedentaryTimelineItem(SedentaryRecord record) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final timeFormat = DateFormat('HH:mm');
     final dateFormat = DateFormat('MM月dd日');
 

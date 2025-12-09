@@ -49,8 +49,8 @@ class _PocketFitAppState extends State<PocketFitApp> {
       debugShowCheckedModeBanner: false,
 
       // 国际化配置
-      localizationsDelegates: const [
-        AppLocalizationsDelegate(),
+      localizationsDelegates: [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

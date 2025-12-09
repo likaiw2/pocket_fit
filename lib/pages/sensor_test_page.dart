@@ -77,7 +77,7 @@ class _SensorTestPageState extends State<SensorTestPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
@@ -151,7 +151,7 @@ class _SensorTestPageState extends State<SensorTestPage> {
 
   // 运动状态卡片
   Widget _buildMotionStateCard() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final stats = _currentMotionStats;
     final state = stats?.state ?? MotionState.unknown;
 
@@ -277,7 +277,7 @@ class _SensorTestPageState extends State<SensorTestPage> {
     required SensorData? data,
     required List<double> history,
   }) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -367,7 +367,7 @@ class _SensorTestPageState extends State<SensorTestPage> {
 
   // 简单的图表显示
   Widget _buildSimpleChart(List<double> history, Color color) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     if (history.isEmpty) {
       return const SizedBox.shrink();
@@ -423,7 +423,7 @@ class _SensorTestPageState extends State<SensorTestPage> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              '当前值: ${history.last.toStringAsFixed(3)}',
+              'Value: ${history.last.toStringAsFixed(3)}',
               style: TextStyle(
                 fontSize: 11,
                 color: color,
@@ -445,7 +445,7 @@ class _SensorTestPageState extends State<SensorTestPage> {
 
   // 缓冲区信息卡片
   Widget _buildBufferInfoCard() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final stats = _sensorService.getBufferStats();
 
     return Container(
@@ -526,7 +526,7 @@ class _SensorTestPageState extends State<SensorTestPage> {
 
   /// 获取运动状态的文本
   String _getMotionStateText(String? stateString) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     if (stateString == null) return l10n.unknown;
 

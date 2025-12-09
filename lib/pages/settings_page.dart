@@ -96,7 +96,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   /// 显示更新日志
   Future<void> _showUpdateLog() async {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     try {
       // 从 assets 加载更新日志
@@ -148,7 +148,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     if (_isLoading) {
       return Scaffold(

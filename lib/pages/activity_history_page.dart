@@ -43,7 +43,7 @@ class _ActivityHistoryPageState extends State<ActivityHistoryPage> {
         _isLoading = false;
       });
     } catch (e) {
-      final l10n = AppLocalizations.of(context);
+      final l10n = AppLocalizations.of(context)!;
       print('ActivityHistoryPage: ${l10n.loadingFailed} - $e');
       setState(() {
         _isLoading = false;
@@ -53,7 +53,7 @@ class _ActivityHistoryPageState extends State<ActivityHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
@@ -93,7 +93,7 @@ class _ActivityHistoryPageState extends State<ActivityHistoryPage> {
 
   /// 空状态
   Widget _buildEmptyState() {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Center(
       child: Column(
@@ -127,7 +127,7 @@ class _ActivityHistoryPageState extends State<ActivityHistoryPage> {
 
   /// 活动卡片
   Widget _buildActivityCard(ActivityRecord record) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
@@ -277,7 +277,7 @@ class _ActivityHistoryPageState extends State<ActivityHistoryPage> {
 
   /// 格式化日期时间
   String _formatDateTime(DateTime dateTime) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
@@ -290,7 +290,8 @@ class _ActivityHistoryPageState extends State<ActivityHistoryPage> {
       dateStr = l10n.yesterday;
     } else {
       // 对于英文，使用 "MMM dd" 格式；对于中文，使用 "M月d日" 格式
-      if (l10n.locale.languageCode == 'en') {
+      final locale = Localizations.localeOf(context);
+      if (locale.languageCode == 'en') {
         final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         dateStr = '${months[dateTime.month - 1]} ${dateTime.day}';
       } else {

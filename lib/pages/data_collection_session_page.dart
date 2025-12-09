@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:pocket_fit/models/sensor_data.dart';
 import 'package:pocket_fit/services/data_collection_service.dart';
+import 'package:pocket_fit/l10n/app_localizations.dart';
 
 /// 数据采集会话页面 - 实际采集数据
 class DataCollectionSessionPage extends StatefulWidget {
@@ -70,20 +71,22 @@ class _DataCollectionSessionPageState extends State<DataCollectionSessionPage> {
   }
 
   Future<void> _stopCollection() async {
+    final l10n = AppLocalizations.of(context)!;
+
     // 显示确认对话框
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('确认结束采集'),
-        content: Text('已采集 $_dataPointCount 个数据点\n确定要结束采集吗？'),
+        title: Text(l10n.confirmEndCollection),
+        content: Text(l10n.dataPointsCollected(_dataPointCount)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('确认'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -97,29 +100,31 @@ class _DataCollectionSessionPageState extends State<DataCollectionSessionPage> {
     if (!mounted) return;
 
     if (dataSet != null) {
+      final l10n = AppLocalizations.of(context)!;
+
       // 显示成功对话框
       await showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Row(
+          title: Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.green),
-              SizedBox(width: 8),
-              Text('采集完成'),
+              const Icon(Icons.check_circle, color: Colors.green),
+              const SizedBox(width: 8),
+              Text(l10n.collectionCompleteTitle),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('运动类型: ${dataSet.activityType.getDisplayName(context)}'),
-              Text('目标次数: ${dataSet.repetitionCount}'),
-              Text('数据点数: ${dataSet.dataPoints.length}'),
-              Text('持续时间: ${dataSet.duration.toStringAsFixed(1)}秒'),
+              Text(l10n.activityTypeLabel(dataSet.activityType.getDisplayName(context))),
+              Text(l10n.targetCountLabel(dataSet.repetitionCount)),
+              Text(l10n.dataPointsLabel(dataSet.dataPoints.length)),
+              Text(l10n.durationLabel(dataSet.duration.toStringAsFixed(1))),
               const SizedBox(height: 8),
-              const Text(
-                '数据已保存为 CSV 和 JSON 格式',
-                style: TextStyle(
+              Text(
+                l10n.dataSavedMessage,
+                style: const TextStyle(
                   fontSize: 12,
                   color: Colors.grey,
                 ),
@@ -132,7 +137,7 @@ class _DataCollectionSessionPageState extends State<DataCollectionSessionPage> {
                 Navigator.pop(context); // 关闭对话框
                 Navigator.pop(context); // 返回上一页
               },
-              child: const Text('完成'),
+              child: Text(l10n.done),
             ),
           ],
         ),
@@ -142,9 +147,11 @@ class _DataCollectionSessionPageState extends State<DataCollectionSessionPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('采集 - ${widget.activityType.getDisplayName(context)}'),
+        title: Text(l10n.collectionSession(widget.activityType.getDisplayName(context))),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
       body: SafeArea(
@@ -172,7 +179,7 @@ class _DataCollectionSessionPageState extends State<DataCollectionSessionPage> {
 
               // 目标次数
               Text(
-                '请完成 ${widget.targetRepetitions} 次动作',
+                l10n.pleaseComplete(widget.targetRepetitions),
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.grey.shade600,
@@ -203,7 +210,7 @@ class _DataCollectionSessionPageState extends State<DataCollectionSessionPage> {
                             const Icon(Icons.stop_circle, color: Colors.grey),
                           const SizedBox(width: 8),
                           Text(
-                            _isCollecting ? '正在采集...' : (_isReady ? '准备就绪' : '等待开始'),
+                            _isCollecting ? l10n.collecting : (_isReady ? l10n.ready : l10n.waitingToStart),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -223,9 +230,9 @@ class _DataCollectionSessionPageState extends State<DataCollectionSessionPage> {
                           color: Colors.blue,
                         ),
                       ),
-                      const Text(
-                        '数据点',
-                        style: TextStyle(
+                      Text(
+                        l10n.dataPoints,
+                        style: const TextStyle(
                           fontSize: 14,
                           color: Colors.grey,
                         ),
@@ -234,7 +241,7 @@ class _DataCollectionSessionPageState extends State<DataCollectionSessionPage> {
 
                       // 采样频率提示
                       Text(
-                        '采样频率: 10Hz',
+                        l10n.samplingFrequency,
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade600,
@@ -261,8 +268,8 @@ class _DataCollectionSessionPageState extends State<DataCollectionSessionPage> {
                     Expanded(
                       child: Text(
                         _isCollecting
-                          ? '完成动作后，点击下方按钮结束采集'
-                          : '准备好后，点击下方按钮开始采集',
+                          ? l10n.tipWhenCollecting
+                          : l10n.tipWhenReady,
                         style: const TextStyle(fontSize: 14),
                       ),
                     ),
@@ -284,9 +291,9 @@ class _DataCollectionSessionPageState extends State<DataCollectionSessionPage> {
                       _startCollection();
                     },
                     icon: const Icon(Icons.play_arrow),
-                    label: const Text(
-                      '开始采集',
-                      style: TextStyle(fontSize: 18),
+                    label: Text(
+                      l10n.startCollection,
+                      style: const TextStyle(fontSize: 18),
                     ),
                     style: FilledButton.styleFrom(
                       backgroundColor: Colors.green,
@@ -300,9 +307,9 @@ class _DataCollectionSessionPageState extends State<DataCollectionSessionPage> {
                   child: FilledButton.icon(
                     onPressed: _isCollecting ? _stopCollection : null,
                     icon: const Icon(Icons.stop),
-                    label: const Text(
-                      '结束采集',
-                      style: TextStyle(fontSize: 18),
+                    label: Text(
+                      l10n.endCollection,
+                      style: const TextStyle(fontSize: 18),
                     ),
                     style: FilledButton.styleFrom(
                       backgroundColor: Colors.red,

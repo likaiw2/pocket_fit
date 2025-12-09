@@ -166,7 +166,7 @@ extension ActivityTypeExtension on ActivityType {
 
   /// 获取国际化的显示名称
   String getDisplayName(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     switch (this) {
       case ActivityType.idle:
         return l10n.idle;
@@ -191,7 +191,7 @@ extension ActivityTypeExtension on ActivityType {
 
   /// 获取国际化的描述
   String getDescription(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context)!;
     switch (this) {
       case ActivityType.idle:
         return l10n.idleDesc;

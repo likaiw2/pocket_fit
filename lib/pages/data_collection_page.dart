@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:pocket_fit/models/sensor_data.dart';
 import 'package:pocket_fit/pages/data_collection_session_page.dart';
 import 'package:pocket_fit/pages/data_management_page.dart';
+import 'package:pocket_fit/l10n/app_localizations.dart';
 
 /// 数据采集页面 - 选择运动类型
 class DataCollectionPage extends StatelessWidget {
@@ -10,9 +11,11 @@ class DataCollectionPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('训练数据采集'),
+        title: Text(l10n.trainingDataTitle),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           IconButton(
@@ -25,7 +28,7 @@ class DataCollectionPage extends StatelessWidget {
                 ),
               );
             },
-            tooltip: '数据管理',
+            tooltip: l10n.dataManagement,
           ),
         ],
       ),
@@ -48,7 +51,7 @@ class DataCollectionPage extends StatelessWidget {
                           Icon(Icons.info_outline, color: Colors.blue.shade700),
                           const SizedBox(width: 8),
                           Text(
-                            '数据采集说明',
+                            l10n.dataCollectionInstructions,
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -58,23 +61,23 @@ class DataCollectionPage extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        '• 选择要采集的运动类型\n'
-                        '• 按照提示完成指定次数的动作\n'
-                        '• 完成后点击"结束采集"按钮\n'
-                        '• 数据将自动保存为CSV和JSON格式',
-                        style: TextStyle(fontSize: 14),
+                      Text(
+                        '${l10n.dataCollectionStep1}\n'
+                        '${l10n.dataCollectionStep2}\n'
+                        '${l10n.dataCollectionStep3}\n'
+                        '${l10n.dataCollectionStep4}',
+                        style: const TextStyle(fontSize: 14),
                       ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               // 运动类型选择
-              const Text(
-                '选择运动类型',
-                style: TextStyle(
+              Text(
+                l10n.selectActivityTypeTitle,
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -192,7 +195,7 @@ class DataCollectionPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '$minTarget-$maxTarget次',
+                  AppLocalizations.of(context)!.timesRange(maxTarget, minTarget),
                   style: const TextStyle(
                     fontSize: 11,
                     color: Colors.white70,

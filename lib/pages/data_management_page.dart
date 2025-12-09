@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pocket_fit/services/data_collection_service.dart';
+import 'package:pocket_fit/l10n/app_localizations.dart';
 
 /// 数据管理页面 - 查看和导出已采集的数据
 class DataManagementPage extends StatefulWidget {
@@ -40,20 +41,22 @@ class _DataManagementPageState extends State<DataManagementPage> {
   }
 
   Future<void> _copyPathToClipboard(String filePath) async {
+    final l10n = AppLocalizations.of(context)!;
+
     try {
       await Clipboard.setData(ClipboardData(text: filePath));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('文件路径已复制到剪贴板'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(l10n.filePathCopied),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('复制失败: $e')),
+          SnackBar(content: Text(l10n.copyFailed(e.toString()))),
         );
       }
     }
@@ -62,20 +65,22 @@ class _DataManagementPageState extends State<DataManagementPage> {
 
 
   Future<void> _clearAllData() async {
+    final l10n = AppLocalizations.of(context)!;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('确认清除所有数据'),
-        content: const Text('此操作将删除所有已采集的数据，无法恢复！'),
+        title: Text(l10n.clearAllData),
+        content: Text(l10n.clearAllDataConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('清除'),
+            child: Text(l10n.clear),
           ),
         ],
       ),
@@ -86,7 +91,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
       await _loadDataFiles();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('所有数据已清除')),
+          SnackBar(content: Text(l10n.allDataCleared)),
         );
       }
     }
@@ -94,19 +99,20 @@ class _DataManagementPageState extends State<DataManagementPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final metaFiles = _dataFiles.where((f) => f.path.endsWith('_meta.txt')).toList();
     final csvFiles = _dataFiles.where((f) => f.path.endsWith('_data.csv')).toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('数据管理'),
+        title: Text(l10n.dataManagementTitle),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         actions: [
           if (_dataFiles.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.delete_sweep),
               onPressed: _clearAllData,
-              tooltip: '清除所有数据',
+              tooltip: l10n.clearAllData,
             ),
         ],
       ),
@@ -119,6 +125,8 @@ class _DataManagementPageState extends State<DataManagementPage> {
   }
 
   Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(context)!;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -130,7 +138,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
           ),
           const SizedBox(height: 16),
           Text(
-            '暂无数据',
+            l10n.noDataYet,
             style: TextStyle(
               fontSize: 18,
               color: Colors.grey.shade600,
@@ -138,7 +146,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
           ),
           const SizedBox(height: 8),
           Text(
-            '开始采集训练数据吧！',
+            l10n.startCollectingData,
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey.shade400,
@@ -150,6 +158,8 @@ class _DataManagementPageState extends State<DataManagementPage> {
   }
 
   Widget _buildDataList(List<FileSystemEntity> metaFiles, List<FileSystemEntity> csvFiles) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Column(
       children: [
         // 统计信息卡片
@@ -165,13 +175,13 @@ class _DataManagementPageState extends State<DataManagementPage> {
                   children: [
                     _buildStatItem(
                       icon: Icons.dataset,
-                      label: '数据集',
+                      label: l10n.datasets,
                       value: '${metaFiles.length}',
                       color: Colors.blue,
                     ),
                     _buildStatItem(
                       icon: Icons.insert_drive_file,
-                      label: '文件总数',
+                      label: l10n.totalFiles,
                       value: '${_dataFiles.length}',
                       color: Colors.green,
                     ),
@@ -285,7 +295,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
           const Divider(height: 1),
           ListTile(
             leading: const Icon(Icons.info_outline, color: Colors.orange),
-            title: const Text('元信息文件'),
+            title: Text(AppLocalizations.of(context)!.metadataFile),
             subtitle: Text(metaFile.path.split('/').last),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -293,24 +303,24 @@ class _DataManagementPageState extends State<DataManagementPage> {
                 IconButton(
                   icon: const Icon(Icons.visibility),
                   onPressed: () => _viewMetaFile(metaFile),
-                  tooltip: '查看',
+                  tooltip: AppLocalizations.of(context)!.view,
                 ),
                 IconButton(
                   icon: const Icon(Icons.copy),
                   onPressed: () => _copyPathToClipboard(metaFile.path),
-                  tooltip: '复制路径',
+                  tooltip: AppLocalizations.of(context)!.copyPath,
                 ),
               ],
             ),
           ),
           ListTile(
             leading: const Icon(Icons.table_chart, color: Colors.green),
-            title: const Text('CSV 数据文件'),
+            title: Text(AppLocalizations.of(context)!.csvDataFile),
             subtitle: Text(csvFile.path.split('/').last),
             trailing: IconButton(
               icon: const Icon(Icons.copy),
               onPressed: () => _copyPathToClipboard(csvFile.path),
-              tooltip: '复制路径',
+              tooltip: AppLocalizations.of(context)!.copyPath,
             ),
           ),
         ],
@@ -319,20 +329,22 @@ class _DataManagementPageState extends State<DataManagementPage> {
   }
 
   Future<void> _deleteDataSet(FileSystemEntity metaFile, FileSystemEntity csvFile) async {
+    final l10n = AppLocalizations.of(context)!;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('确认删除'),
-        content: const Text('确定要删除这个数据集吗？\n（包括元信息和CSV数据文件）'),
+        title: Text(l10n.confirmDelete),
+        content: Text(l10n.deleteDatasetConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('删除'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -346,13 +358,13 @@ class _DataManagementPageState extends State<DataManagementPage> {
         await _loadDataFiles();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('数据集已删除')),
+            SnackBar(content: Text(l10n.datasetDeleted)),
           );
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('删除失败: $e')),
+            SnackBar(content: Text(l10n.deleteFailed(e.toString()))),
           );
         }
       }
@@ -360,6 +372,8 @@ class _DataManagementPageState extends State<DataManagementPage> {
   }
 
   Future<void> _viewMetaFile(FileSystemEntity metaFile) async {
+    final l10n = AppLocalizations.of(context)!;
+
     try {
       final file = File(metaFile.path);
       final content = await file.readAsString();
@@ -368,7 +382,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('元信息'),
+            title: Text(l10n.metadata),
             content: SingleChildScrollView(
               child: Text(
                 content,
@@ -378,7 +392,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('关闭'),
+                child: Text(l10n.close),
               ),
             ],
           ),
@@ -387,7 +401,7 @@ class _DataManagementPageState extends State<DataManagementPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('读取文件失败: $e')),
+          SnackBar(content: Text(l10n.readFileFailed(e.toString()))),
         );
       }
     }
